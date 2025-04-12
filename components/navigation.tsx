@@ -1,24 +1,39 @@
+// components/navigation.tsx
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { useSession } from "next-auth/react"
+import { usePathname, useRouter } from "next/navigation"
 import { Home, PlusCircle, User, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { signOut } from "next-auth/react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useAuth } from "@/lib/authContext"
+import { signOut } from "@/lib/firebase"
 
 export default function Navigation() {
   const pathname = usePathname()
-  const { data: session } = useSession()
+  const router = useRouter()
+  const { user, loading } = useAuth()
 
-  if (!session && pathname !== "/login") {
+  if (loading) {
+    return null // Or a loading spinner
+  }
+
+  if (!user && pathname !== "/login") {
     return null
   }
 
   if (pathname === "/login") {
     return null
+  }
+
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+      router.push("/login")
+    } catch (error) {
+      console.error("Error signing out:", error)
+    }
   }
 
   return (
@@ -47,8 +62,8 @@ export default function Navigation() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={session?.user?.image || ""} alt={session?.user?.name || ""} />
-                    <AvatarFallback>{session?.user?.name?.charAt(0) || "U"}</AvatarFallback>
+                    <AvatarImage src={user?.photoURL || ""} alt={user?.displayName || ""} />
+                    <AvatarFallback>{user?.displayName?.charAt(0) || "U"}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
@@ -59,7 +74,7 @@ export default function Navigation() {
                     <span>Profile</span>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
+                <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
                 </DropdownMenuItem>

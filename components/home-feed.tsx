@@ -1,15 +1,21 @@
 "use client"
 
 import { useState } from "react"
-import { useSession } from "next-auth/react"
+import { useAuth } from "@/lib/authContext"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Search } from "lucide-react"
 import RecommendationSection from "@/components/recommendation-section"
 
 export default function HomeFeed() {
-  const { data: session } = useSession()
+  // Replace useSession with useAuth
+  const { user, loading } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
+
+  // Add a loading state while authentication is initializing
+  if (loading) {
+    return <div className="container py-6 flex justify-center">Loading...</div>
+  }
 
   return (
     <div className="container py-6 space-y-8">

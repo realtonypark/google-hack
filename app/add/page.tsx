@@ -1,12 +1,12 @@
-import { getServerSession } from "next-auth/next"
+// app/add/page.tsx
 import { redirect } from "next/navigation"
-import { authOptions } from "@/lib/auth"
+import { getServerUser } from "@/lib/getServerUser"
 import AddMediaForm from "@/components/add-media-form"
 
 export default async function AddMediaPage() {
-  const session = await getServerSession(authOptions)
+  const user = await getServerUser()
 
-  if (!session) {
+  if (!user) {
     redirect("/login")
   }
 

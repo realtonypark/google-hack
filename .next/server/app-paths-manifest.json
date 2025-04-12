@@ -1,10 +1,6 @@
 {
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/api/populate-media/route": "app/api/populate-media/route.js",
-  "/_not-found/page": "app/_not-found/page.js",
-  "/login/page": "app/login/page.js",
-  "/profile/[username]/page": "app/profile/[username]/page.js",
-  "/profile/page": "app/profile/page.js",
   "/page": "app/page.js",
-  "/admin/populate-media/page": "app/admin/populate-media/page.js"
+  "/login/page": "app/login/page.js",
+  "/profile/page": "app/profile/page.js",
+  "/profile/[username]/page": "app/profile/[username]/page.js"
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSession } from "next-auth/react"
+import { useAuth } from "@/lib/authContext"
 import { getRecommendations } from "@/lib/api"
 import MediaCard from "@/components/media-card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -14,13 +14,17 @@ interface RecommendationSectionProps {
 }
 
 export default function RecommendationSection({ title, description, type }: RecommendationSectionProps) {
-  const { data: session } = useSession()
+  // Replace useSession with useAuth
+  const { user, loading: authLoading } = useAuth()
   const [recommendations, setRecommendations] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const fetchRecommendations = async () => {
-      if (session?.user) {
+      // Wait for auth to be ready and user to be available
+      if (authLoading) return
+      
+      if (user) {
         setIsLoading(true)
         try {
           const data = await getRecommendations(type)
@@ -36,7 +40,7 @@ export default function RecommendationSection({ title, description, type }: Reco
     }
 
     fetchRecommendations()
-  }, [session, type])
+  }, [user, authLoading, type])
 
   return (
     <section className="space-y-3">
@@ -47,7 +51,7 @@ export default function RecommendationSection({ title, description, type }: Reco
 
       <ScrollArea className="w-full whitespace-nowrap pb-4">
         <div className="flex w-max space-x-4 p-1">
-          {isLoading
+          {isLoading || authLoading
             ? Array(6)
                 .fill(0)
                 .map((_, i) => (

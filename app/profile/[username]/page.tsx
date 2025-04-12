@@ -1,14 +1,14 @@
-import { getServerSession } from "next-auth/next"
+// app/profile/[username]/page.tsx
 import { redirect } from "next/navigation"
-import { authOptions } from "@/lib/auth"
+import { getServerUser } from "@/lib/getServerUser"
 import { getUserProfile } from "@/lib/api"
 import ProfileView from "@/components/profile-view"
 import { notFound } from "next/navigation"
 
 export default async function ProfilePage({ params }: { params: { username: string } }) {
-  const session = await getServerSession(authOptions)
+  const user = await getServerUser()
 
-  if (!session) {
+  if (!user) {
     redirect("/login")
   }
 
@@ -18,7 +18,7 @@ export default async function ProfilePage({ params }: { params: { username: stri
     notFound()
   }
 
-  const isOwnProfile = session.user.username === params.username
+  const isOwnProfile = user.username === params.username
 
   return <ProfileView profile={profile} isOwnProfile={isOwnProfile} />
 }

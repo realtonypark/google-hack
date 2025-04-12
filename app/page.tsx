@@ -1,12 +1,12 @@
+// app/page.tsx
 import { redirect } from "next/navigation"
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth"
+import { getServerUser } from "@/lib/getServerUser"
 import HomeFeed from "@/components/home-feed"
 
 export default async function Home() {
-  const session = await getServerSession(authOptions)
+  const user = await getServerUser()
 
-  if (!session) {
+  if (!user) {
     redirect("/login")
   }
 

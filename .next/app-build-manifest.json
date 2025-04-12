@@ -6,26 +6,6 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/admin/init/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/admin/init/page.js"
-    ],
-    "/api/auth/[...nextauth]/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/auth/[...nextauth]/route.js"
-    ],
-    "/admin/populate-media/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/admin/populate-media/page.js"
-    ],
-    "/api/populate-media/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/populate-media/route.js"
-    ],
     "/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -36,6 +16,11 @@
       "static/chunks/main-app.js",
       "static/chunks/app/login/page.js"
     ],
+    "/api/auth/session/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/auth/session/route.js"
+    ],
     "/profile/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -45,11 +30,6 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/profile/[username]/page.js"
-    ],
-    "/_not-found/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/_not-found/page.js"
     ]
   }
 }

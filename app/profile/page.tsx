@@ -1,13 +1,13 @@
-import { getServerSession } from "next-auth/next"
+// app/profile/page.tsx
 import { redirect } from "next/navigation"
-import { authOptions } from "@/lib/auth"
+import { getServerUser } from "@/lib/getServerUser"
 
 export default async function ProfileRedirect() {
-  const session = await getServerSession(authOptions)
+  const user = await getServerUser()
 
-  if (!session) {
+  if (!user) {
     redirect("/login")
   }
 
-  redirect(`/profile/${session.user.username}`)
+  redirect(`/profile/${user.username}`)
 }

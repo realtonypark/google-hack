@@ -621,6 +621,9 @@ video {
 .inset-0 {
   inset: 0px;
 }
+.inset-4 {
+  inset: 1rem;
+}
 .inset-x-0 {
   left: 0px;
   right: 0px;
@@ -709,6 +712,12 @@ video {
 }
 .top-full {
   top: 100%;
+}
+.bottom-1 {
+  bottom: 0.25rem;
+}
+.top-1 {
+  top: 0.25rem;
 }
 .z-10 {
   z-index: 10;
@@ -928,6 +937,15 @@ video {
 .h-svh {
   height: 100svh;
 }
+.h-16 {
+  height: 4rem;
+}
+.h-\[120px\] {
+  height: 120px;
+}
+.h-\[200px\] {
+  height: 200px;
+}
 .max-h-96 {
   max-height: 24rem;
 }
@@ -948,6 +966,9 @@ video {
 }
 .min-h-svh {
   min-height: 100svh;
+}
+.min-h-\[200px\] {
+  min-height: 200px;
 }
 .w-0 {
   width: 0px;
@@ -1039,6 +1060,12 @@ video {
 }
 .w-screen {
   width: 100vw;
+}
+.w-12 {
+  width: 3rem;
+}
+.w-\[70px\] {
+  width: 70px;
 }
 .min-w-0 {
   min-width: 0px;
@@ -1177,11 +1204,11 @@ video {
 .list-inside {
   list-style-position: inside;
 }
-.list-none {
-  list-style-type: none;
-}
 .list-disc {
   list-style-type: disc;
+}
+.list-none {
+  list-style-type: none;
 }
 .grid-cols-1 {
   grid-template-columns: repeat(1, minmax(0, 1fr));
@@ -1191,6 +1218,9 @@ video {
 }
 .grid-cols-3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.grid-cols-7 {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 .flex-row {
   flex-direction: row;
@@ -1245,6 +1275,9 @@ video {
 }
 .gap-8 {
   gap: 2rem;
+}
+.gap-0\.5 {
+  gap: 0.125rem;
 }
 .space-x-1 > :not([hidden]) ~ :not([hidden]) {
   --tw-space-x-reverse: 0;
@@ -1636,6 +1669,9 @@ video {
   font-size: 0.75rem;
   line-height: 1rem;
 }
+.text-\[0\.70rem\] {
+  font-size: 0.70rem;
+}
 .font-bold {
   font-weight: 700;
 }
@@ -1647,6 +1683,9 @@ video {
 }
 .font-semibold {
   font-weight: 600;
+}
+.uppercase {
+  text-transform: uppercase;
 }
 .capitalize {
   text-transform: capitalize;
@@ -2057,12 +2096,20 @@ video {
   color: hsl(var(--primary-foreground));
 }
  
+.hover\:text-primary:hover {
+  color: hsl(var(--primary));
+}
+ 
 .hover\:underline:hover {
   text-decoration-line: underline;
 }
  
 .hover\:opacity-100:hover {
   opacity: 1;
+}
+ 
+.hover\:opacity-80:hover {
+  opacity: 0.8;
 }
  
 .hover\:shadow-\[0_0_0_1px_hsl\(var\(--sidebar-accent\)\)\]:hover {
@@ -2873,6 +2920,10 @@ video {
 
   .sm\:max-w-sm {
     max-width: 24rem;
+  }
+
+  .sm\:max-w-\[500px\] {
+    max-width: 500px;
   }
 
   .sm\:grid-cols-2 {
