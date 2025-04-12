@@ -1,4 +1,4 @@
-// File: /Users/realtonypark2/Desktop/google-hack/app/profile/[username]/page.tsx
+// File: /Users/junhohong/Desktop/google-hack/app/profile/[username]/page.tsx
 import * as entry from '../../../../../app/profile/[username]/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

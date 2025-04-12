@@ -1,8 +1,8 @@
 {
-  "/api/media/search/route": "app/api/media/search/route.js",
   "/api/media/[id]/route": "app/api/media/[id]/route.js",
-  "/page": "app/page.js",
-  "/profile/page": "app/profile/page.js",
+  "/api/media/search/route": "app/api/media/search/route.js",
   "/profile/[username]/page": "app/profile/[username]/page.js",
+  "/profile/page": "app/profile/page.js",
+  "/page": "app/page.js",
   "/media/[id]/page": "app/media/[id]/page.js"
 }
