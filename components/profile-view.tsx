@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import Image from "next/image"
-import { CalendarIcon, BookOpen, Film, Tv, ListChecks } from "lucide-react"
+import { CalendarIcon, BookOpen, Film, Tv, ListChecks, ChevronLeft, ChevronRight, ChevronDown, Search, Loader2 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,14 +10,98 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { ChartContainer } from "@/components/ui/chart"
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 
 interface ProfileViewProps {
   profile: any
   isOwnProfile: boolean
 }
 
+interface FavoriteMedia {
+  title: string
+  coverImage: string
+}
+
+interface FavoriteMediaCollection {
+  book: FavoriteMedia
+  movie: FavoriteMedia
+  series: FavoriteMedia
+}
+
 export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
   const [date, setDate] = useState<Date | undefined>(new Date())
+  const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [searchQuery, setSearchQuery] = useState("")
+  const [isSearching, setIsSearching] = useState(false)
+  const [searchResults, setSearchResults] = useState<Array<{
+    id: string
+    title: string
+    coverImage: string
+    year: string
+  }>>([])
+  const [profileImage, setProfileImage] = useState(profile.image || "/placeholder.svg?height=128&width=128")
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Mock taste data
+  const tasteData = {
+    description:
+      "You're a cinematic explorer with a penchant for thought-provoking narratives. Your media choices reveal a mind that enjoys complex characters and intricate plots. While you appreciate the occasional blockbuster, you're drawn to stories that challenge conventions and offer fresh perspectives.",
+    genres: [
+      { name: "Drama", percentage: 35 },
+      { name: "Sci-Fi", percentage: 25 },
+      { name: "Thriller", percentage: 20 },
+      { name: "Fantasy", percentage: 15 },
+      { name: "Comedy", percentage: 5 },
+    ],
+    favoriteMedia: {
+      book: {
+        title: "The Lord of the Rings",
+        coverImage: "/placeholder.svg?height=400&width=250",
+      },
+      movie: {
+        title: "The Shawshank Redemption",
+        coverImage: "/placeholder.svg?height=400&width=250",
+      },
+      series: {
+        title: "Breaking Bad",
+        coverImage: "/placeholder.svg?height=400&width=250",
+      },
+    },
+  }
+
+  const [editingMedia, setEditingMedia] = useState<{
+    type: 'book' | 'movie' | 'series' | null
+    isOpen: boolean
+  }>({
+    type: null,
+    isOpen: false
+  })
+
+  const [favoriteMedia, setFavoriteMedia] = useState<FavoriteMediaCollection>(tasteData.favoriteMedia)
+
+  const formatYearMonth = (date: Date) => {
+    return `${date.getFullYear()}.${(date.getMonth() + 1).toString().padStart(2, '0')}`
+  }
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    setCurrentMonth(prevDate => {
+      const newDate = new Date(prevDate)
+      if (direction === 'prev') {
+        newDate.setMonth(newDate.getMonth() - 1)
+      } else {
+        newDate.setMonth(newDate.getMonth() + 1)
+      }
+      return newDate
+    })
+  }
+
+  const goToToday = () => {
+    setCurrentMonth(new Date())
+  }
 
   // Mock data for demo
   const mockLibrary = [
@@ -69,31 +153,112 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
     },
   ]
 
-  // Mock taste data
-  const tasteData = {
-    description:
-      "You're a cinematic explorer with a penchant for thought-provoking narratives. Your media choices reveal a mind that enjoys complex characters and intricate plots. While you appreciate the occasional blockbuster, you're drawn to stories that challenge conventions and offer fresh perspectives.",
-    genres: [
-      { name: "Drama", percentage: 35 },
-      { name: "Sci-Fi", percentage: 25 },
-      { name: "Thriller", percentage: 20 },
-      { name: "Fantasy", percentage: 15 },
-      { name: "Comedy", percentage: 5 },
+  // Mock rating distribution data
+  const ratingData = {
+    averageRating: 3.7,
+    numberOfRatings: 295,
+    mostFrequent: 4.0,
+    distribution: [
+      { rating: "1", count: 10 },
+      { rating: "2", count: 15 },
+      { rating: "3", count: 35 },
+      { rating: "4", count: 45 },
+      { rating: "5", count: 25 },
     ],
-    favoriteMedia: {
-      book: {
-        title: "The Lord of the Rings",
-        coverImage: "/placeholder.svg?height=400&width=250",
-      },
-      movie: {
-        title: "The Shawshank Redemption",
-        coverImage: "/placeholder.svg?height=400&width=250",
-      },
-      series: {
-        title: "Breaking Bad",
-        coverImage: "/placeholder.svg?height=400&width=250",
-      },
+  }
+
+  const handleEditMedia = (type: 'book' | 'movie' | 'series') => {
+    if (isOwnProfile) {
+      setEditingMedia({ type, isOpen: true })
+    }
+  }
+
+  const handleSaveMedia = (newTitle: string, newCoverImage: string) => {
+    if (editingMedia.type) {
+      const mediaType = editingMedia.type
+      setFavoriteMedia(prev => ({
+        ...prev,
+        [mediaType]: {
+          title: newTitle,
+          coverImage: newCoverImage,
+        }
+      }))
+      setEditingMedia({ type: null, isOpen: false })
+    }
+  }
+
+  // Mock search results for demo
+  const mockSearchResults = [
+    {
+      id: "1",
+      title: "The Lord of the Rings: The Fellowship of the Ring",
+      coverImage: "/placeholder.svg",
+      year: "2001"
     },
+    {
+      id: "2",
+      title: "The Lord of the Rings: The Two Towers",
+      coverImage: "/placeholder.svg",
+      year: "2002"
+    },
+    {
+      id: "3",
+      title: "The Lord of the Rings: The Return of the King",
+      coverImage: "/placeholder.svg",
+      year: "2003"
+    }
+  ]
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query)
+    if (query.length > 2) {
+      setIsSearching(true)
+      // Simulate API call delay
+      setTimeout(() => {
+        setSearchResults(mockSearchResults)
+        setIsSearching(false)
+      }, 500)
+    } else {
+      setSearchResults([])
+    }
+  }
+
+  const handleSelectMedia = (media: { title: string, coverImage: string }) => {
+    handleSaveMedia(media.title, media.coverImage)
+  }
+
+  const handleProfileImageClick = () => {
+    if (isOwnProfile && fileInputRef.current) {
+      fileInputRef.current.click()
+    }
+  }
+
+  const handleProfileImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      // Check if file is an image
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file')
+        return
+      }
+
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size should be less than 5MB')
+        return
+      }
+
+      // Create a URL for the selected file
+      const imageUrl = URL.createObjectURL(file)
+      setProfileImage(imageUrl)
+
+      // TODO: Upload the image to your backend here
+      // You would typically:
+      // 1. Create a FormData object
+      // 2. Append the file to it
+      // 3. Send it to your API endpoint
+      // 4. Update the profile image URL with the response from the server
+    }
   }
 
   return (
@@ -104,26 +269,40 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
             <CardHeader className="flex flex-col items-center text-center">
               <div className="relative w-32 h-32">
                 <Avatar className="w-32 h-32">
-                  <AvatarImage src={profile.image || "/placeholder.svg?height=128&width=128"} />
+                  <AvatarImage src={profileImage} />
                   <AvatarFallback>{profile.name?.charAt(0) || "U"}</AvatarFallback>
                 </Avatar>
                 {isOwnProfile && (
-                  <Button size="icon" variant="outline" className="absolute bottom-0 right-0 rounded-full">
-                    <span className="sr-only">Edit Avatar</span>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="h-4 w-4"
+                  <>
+                    <Button 
+                      size="icon" 
+                      variant="outline" 
+                      className="absolute bottom-0 right-0 rounded-full"
+                      onClick={handleProfileImageClick}
                     >
-                      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                      <path d="m15 5 4 4" />
-                    </svg>
-                  </Button>
+                      <span className="sr-only">Edit Avatar</span>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="h-4 w-4"
+                      >
+                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                        <path d="m15 5 4 4" />
+                      </svg>
+                    </Button>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleProfileImageChange}
+                    />
+                  </>
                 )}
               </div>
               <CardTitle className="mt-4">{profile.name}</CardTitle>
@@ -145,16 +324,40 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
             <CardContent>
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-sm font-medium mb-2">Favorite Media</h3>
+                  <h3 className="text-sm font-medium mb-2">Favorite Media (Show your identity!)</h3>
                   <div className="grid grid-cols-3 gap-2">
                     <div className="text-center">
-                      <div className="relative w-full aspect-[2/3] rounded-md overflow-hidden mb-1">
+                      <div 
+                        className={`relative w-full aspect-[2/3] rounded-md overflow-hidden mb-1 ${isOwnProfile ? 'cursor-pointer hover:opacity-80 transition-opacity group' : ''}`}
+                        onClick={() => handleEditMedia('book')}
+                      >
                         <Image
-                          src={tasteData.favoriteMedia.book.coverImage || "/placeholder.svg"}
-                          alt={tasteData.favoriteMedia.book.title}
+                          src={favoriteMedia.book.coverImage || "/placeholder.svg"}
+                          alt={favoriteMedia.book.title}
                           fill
                           className="object-cover"
                         />
+                        {isOwnProfile && (
+                          <Button 
+                            size="icon" 
+                            variant="outline" 
+                            className="absolute bottom-1 right-1 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-background"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="h-3 w-3"
+                            >
+                              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                              <path d="m15 5 4 4" />
+                            </svg>
+                          </Button>
+                        )}
                       </div>
                       <div className="flex justify-center">
                         <Badge variant="outline" className="text-xs">
@@ -164,13 +367,37 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="relative w-full aspect-[2/3] rounded-md overflow-hidden mb-1">
+                      <div 
+                        className={`relative w-full aspect-[2/3] rounded-md overflow-hidden mb-1 ${isOwnProfile ? 'cursor-pointer hover:opacity-80 transition-opacity group' : ''}`}
+                        onClick={() => handleEditMedia('movie')}
+                      >
                         <Image
-                          src={tasteData.favoriteMedia.movie.coverImage || "/placeholder.svg"}
-                          alt={tasteData.favoriteMedia.movie.title}
+                          src={favoriteMedia.movie.coverImage || "/placeholder.svg"}
+                          alt={favoriteMedia.movie.title}
                           fill
                           className="object-cover"
                         />
+                        {isOwnProfile && (
+                          <Button 
+                            size="icon" 
+                            variant="outline" 
+                            className="absolute bottom-1 right-1 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-background"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="h-3 w-3"
+                            >
+                              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                              <path d="m15 5 4 4" />
+                            </svg>
+                          </Button>
+                        )}
                       </div>
                       <div className="flex justify-center">
                         <Badge variant="outline" className="text-xs">
@@ -180,13 +407,37 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="relative w-full aspect-[2/3] rounded-md overflow-hidden mb-1">
+                      <div 
+                        className={`relative w-full aspect-[2/3] rounded-md overflow-hidden mb-1 ${isOwnProfile ? 'cursor-pointer hover:opacity-80 transition-opacity group' : ''}`}
+                        onClick={() => handleEditMedia('series')}
+                      >
                         <Image
-                          src={tasteData.favoriteMedia.series.coverImage || "/placeholder.svg"}
-                          alt={tasteData.favoriteMedia.series.title}
+                          src={favoriteMedia.series.coverImage || "/placeholder.svg"}
+                          alt={favoriteMedia.series.title}
                           fill
                           className="object-cover"
                         />
+                        {isOwnProfile && (
+                          <Button 
+                            size="icon" 
+                            variant="outline" 
+                            className="absolute bottom-1 right-1 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-background"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="h-3 w-3"
+                            >
+                              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                              <path d="m15 5 4 4" />
+                            </svg>
+                          </Button>
+                        )}
                       </div>
                       <div className="flex justify-center">
                         <Badge variant="outline" className="text-xs">
@@ -199,19 +450,86 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-medium mb-2">Taste Breakdown</h3>
-                  <div className="space-y-2">
-                    {tasteData.genres.map((genre) => (
-                      <div key={genre.name} className="space-y-1">
-                        <div className="flex justify-between text-xs">
-                          <span>{genre.name}</span>
-                          <span>{genre.percentage}%</span>
-                        </div>
-                        <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                          <div className="h-full bg-primary" style={{ width: `${genre.percentage}%` }} />
-                        </div>
+                  <h3 className="text-sm font-medium mb-2">Rating Distribution</h3>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{ratingData.averageRating}</div>
+                        <div className="text-xs text-muted-foreground">Average Rating</div>
                       </div>
-                    ))}
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{ratingData.numberOfRatings}</div>
+                        <div className="text-xs text-muted-foreground">Number of Ratings</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{ratingData.mostFrequent}</div>
+                        <div className="text-xs text-muted-foreground">Most frequent</div>
+                      </div>
+                    </div>
+                    <div className="h-[120px] w-full px-2">
+                      <ChartContainer
+                        config={{
+                          bar: {
+                            theme: {
+                              light: "#ec4899",
+                              dark: "#ec4899",
+                            },
+                          },
+                        }}
+                        className="pb-4"
+                      >
+                        <BarChart
+                          data={ratingData.distribution}
+                          margin={{ top: 0, right: 5, bottom: 45, left: 5 }}
+                        >
+                          <XAxis 
+                            dataKey="rating" 
+                            fontSize={12} 
+                            tickLine={false} 
+                            axisLine={true}
+                            stroke="#e5e7eb"
+                            dy={10}
+                          />
+                          <YAxis hide />
+                          <Tooltip
+                            cursor={{ fill: "transparent" }}
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                return (
+                                  <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div className="flex flex-col">
+                                        <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                          Rating
+                                        </span>
+                                        <span className="font-bold text-muted-foreground">
+                                          {payload[0].payload.rating}
+                                        </span>
+                                      </div>
+                                      <div className="flex flex-col">
+                                        <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                          Count
+                                        </span>
+                                        <span className="font-bold">
+                                          {payload[0].payload.count}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )
+                              }
+                              return null
+                            }}
+                          />
+                          <Bar
+                            dataKey="count"
+                            radius={[4, 4, 0, 0]}
+                            fill="var(--color-bar)"
+                            maxBarSize={40}
+                          />
+                        </BarChart>
+                      </ChartContainer>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -222,8 +540,16 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
         <div className="md:col-span-2 space-y-8">
           <Card>
             <CardHeader>
-              <CardTitle>Taste Report</CardTitle>
-              <CardDescription>AI-generated analysis of your media preferences</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Taste Report</CardTitle>
+                  <CardDescription>AI-generated analysis of your media preferences</CardDescription>
+                </div>
+                <Button variant="ghost" className="text-primary hover:text-primary">
+                  See full analysis
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <p className="text-sm">{tasteData.description}</p>
@@ -231,29 +557,104 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
           </Card>
 
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle>Media Calendar</CardTitle>
-              <CardDescription>Track your media consumption over time</CardDescription>
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+              <CardTitle>Calendar</CardTitle>
+              <div className="flex items-center gap-2">
+                <Select defaultValue="all">
+                  <SelectTrigger className="w-[70px] h-8">
+                    <SelectValue>All</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="movies">Movies</SelectItem>
+                    <SelectItem value="books">Books</SelectItem>
+                    <SelectItem value="series">Series</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent>
-              <Calendar mode="single" selected={date} onSelect={setDate} className="rounded-md border" />
-
-              {date && (
-                <div className="mt-4">
-                  <h3 className="text-sm font-medium mb-2">Media on {date.toLocaleDateString()}</h3>
-                  <div className="flex gap-2 overflow-x-auto pb-2">
-                    {/* This would show media consumed on the selected date */}
-                    <div className="relative min-w-[100px] aspect-[2/3] rounded-md overflow-hidden">
-                      <Image
-                        src="/placeholder.svg?height=200&width=150"
-                        alt="Media poster"
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  </div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-4">
+                  <button 
+                    className="p-2 hover:bg-accent rounded-md"
+                    onClick={() => navigateMonth('prev')}
+                  >
+                    <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                  <span className="text-xl font-semibold">{formatYearMonth(currentMonth)}</span>
+                  <button 
+                    className="p-2 hover:bg-accent rounded-md"
+                    onClick={() => navigateMonth('next')}
+                  >
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </button>
                 </div>
-              )}
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={goToToday}
+                >
+                  Today
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-7 gap-6 text-center mb-4">
+                <div className="text-sm text-muted-foreground">Sun</div>
+                <div className="text-sm text-muted-foreground">Mon</div>
+                <div className="text-sm text-muted-foreground">Tue</div>
+                <div className="text-sm text-muted-foreground">Wed</div>
+                <div className="text-sm text-muted-foreground">Thu</div>
+                <div className="text-sm text-muted-foreground">Fri</div>
+                <div className="text-sm text-muted-foreground">Sat</div>
+              </div>
+
+              <div className="grid grid-cols-7 gap-1 text-sm">
+                {Array.from({ length: 35 }, (_, i) => {
+                  const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
+                  const startingDayOfWeek = firstDayOfMonth.getDay()
+                  const day = i - startingDayOfWeek + 1
+                  const currentDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
+                  
+                  // Check if the day is within the current month
+                  const isCurrentMonth = currentDate.getMonth() === currentMonth.getMonth()
+                  
+                  // Check if this day has content (for demo purposes)
+                  const hasContent = [8, 9, 14].includes(day) && isCurrentMonth
+
+                  return (
+                    <div key={i} className="aspect-square p-1">
+                      <div className="relative w-full h-full">
+                        {isCurrentMonth && (
+                          <>
+                            <div className="absolute top-1 left-1">{day}</div>
+                            {hasContent && (
+                              <div className="absolute inset-4 grid grid-cols-2 gap-0.5">
+                                <div className="relative aspect-[2/3] rounded overflow-hidden">
+                                  <Image
+                                    src="/placeholder.svg"
+                                    alt="Media thumbnail"
+                                    fill
+                                    className="object-cover"
+                                  />
+                                </div>
+                                <div className="relative aspect-[2/3] rounded overflow-hidden">
+                                  <Image
+                                    src="/placeholder.svg"
+                                    alt="Media thumbnail"
+                                    fill
+                                    className="object-cover"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </CardContent>
           </Card>
 
@@ -345,6 +746,103 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
           </Card>
         </div>
       </div>
+
+      {/* Edit Media Dialog */}
+      <Dialog open={editingMedia.isOpen} onOpenChange={(open) => {
+        setEditingMedia({ type: null, isOpen: open })
+        setSearchQuery("")
+        setSearchResults([])
+      }}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Favorite {editingMedia.type?.charAt(0).toUpperCase()}{editingMedia.type?.slice(1)}</DialogTitle>
+            <DialogDescription>
+              Search and select your favorite {editingMedia.type} from our database.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder={`Search for a ${editingMedia.type}...`}
+                className="pl-8"
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+              />
+            </div>
+
+            <div className="relative min-h-[200px]">
+              {isSearching ? (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : searchResults.length > 0 ? (
+                <ScrollArea className="h-[200px]">
+                  <div className="space-y-2">
+                    {searchResults.map((result) => (
+                      <div
+                        key={result.id}
+                        className="flex items-center gap-3 p-2 rounded-lg border cursor-pointer hover:bg-accent"
+                        onClick={() => handleSelectMedia(result)}
+                      >
+                        <div className="w-12 h-16 relative rounded overflow-hidden">
+                          <Image
+                            src={result.coverImage}
+                            alt={result.title}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-sm">{result.title}</h4>
+                          <p className="text-xs text-muted-foreground">{result.year}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              ) : searchQuery.length > 0 && (
+                <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
+                  {searchQuery.length <= 2 ? 
+                    "Type at least 3 characters to search" : 
+                    "No results found"}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <h4 className="text-sm font-medium">Current Selection</h4>
+              <div className="flex items-center gap-3 p-2 rounded-lg border bg-muted">
+                <div className="w-12 h-16 relative rounded overflow-hidden">
+                  <Image
+                    src={editingMedia.type ? favoriteMedia[editingMedia.type as keyof FavoriteMediaCollection].coverImage : "/placeholder.svg"}
+                    alt={editingMedia.type ? favoriteMedia[editingMedia.type as keyof FavoriteMediaCollection].title : ""}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+                <div>
+                  <h4 className="font-medium text-sm">
+                    {editingMedia.type ? favoriteMedia[editingMedia.type as keyof FavoriteMediaCollection].title : ""}
+                  </h4>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditingMedia({ type: null, isOpen: false })
+                setSearchQuery("")
+                setSearchResults([])
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
