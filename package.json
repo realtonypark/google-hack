@@ -11,6 +11,7 @@
   "dependencies": {
     "@auth/core": "latest",
     "@auth/firebase-adapter": "^2.8.0",
+    "@google/generative-ai": "^0.24.0",
     "@hookform/resolvers": "^5.0.1",
     "@radix-ui/react-accordion": "^1.2.2",
     "@radix-ui/react-alert-dialog": "^1.1.4",
