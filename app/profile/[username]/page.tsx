@@ -1,24 +1,25 @@
 // app/profile/[username]/page.tsx
-import { redirect } from "next/navigation"
+import { redirect, notFound } from "next/navigation"
 import { getServerUser } from "@/lib/getServerUser"
 import { getUserProfile } from "@/lib/api"
 import ProfileView from "@/components/profile-view"
-import { notFound } from "next/navigation"
 
-export default async function ProfilePage({ params }: { params: { username: string } }) {
+export const dynamic = "force-dynamic"
+
+type Params = {
+  username: string
+}
+
+export default async function ProfilePage({ params }: { params: Promise<Params> }) {
+  const { username } = await params
+
   const user = await getServerUser()
+  if (!user) redirect("/login")
 
-  if (!user) {
-    redirect("/login")
-  }
+  const profile = await getUserProfile(username)
+  if (!profile) notFound()
 
-  const profile = await getUserProfile(params.username)
-
-  if (!profile) {
-    notFound()
-  }
-
-  const isOwnProfile = user.username === params.username
+  const isOwnProfile = user.username === username
 
   return <ProfileView profile={profile} isOwnProfile={isOwnProfile} />
 }
