@@ -1,15 +1,27 @@
 "use client"
 
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { useRouter } from "next/navigation"
+import { MediaItem } from "@/types/database"
 
 interface MediaSearchResultsProps {
-  results: any[]
-  onSelect: (media: any) => void
+  results: MediaItem[]
+  onSelect?: (media: MediaItem) => void
 }
 
 export default function MediaSearchResults({ results, onSelect }: MediaSearchResultsProps) {
+  const router = useRouter()
+
   if (results.length === 0) {
     return null
+  }
+
+  const handleClick = (media: MediaItem) => {
+    if (onSelect) {
+      onSelect(media)
+    } else {
+      router.push(`/media/${media.id}`)
+    }
   }
 
   return (
@@ -20,7 +32,7 @@ export default function MediaSearchResults({ results, onSelect }: MediaSearchRes
             <button
               key={result.id}
               className="flex items-center gap-3 w-full p-2 hover:bg-accent rounded-md text-left"
-              onClick={() => onSelect(result)}
+              onClick={() => handleClick(result)}
             >
               <div className="w-10 h-14 relative overflow-hidden rounded">
                 <img
@@ -32,7 +44,7 @@ export default function MediaSearchResults({ results, onSelect }: MediaSearchRes
               <div>
                 <h3 className="font-medium">{result.title}</h3>
                 <p className="text-xs text-muted-foreground">
-                  {result.type} • {result.year}
+                  {result.type} • {result.releaseDate ? new Date(result.releaseDate).getFullYear() : 'N/A'}
                 </p>
               </div>
             </button>

@@ -1,35 +1,27 @@
 import { NextResponse } from 'next/server';
-import { searchBooks, searchMovies, searchTVShows } from '@/lib/services/externalMediaService';
+import { searchMedia, searchByGenre } from '@/lib/services/searchService';
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const query = searchParams.get('q');
-  const type = searchParams.get('type');
-
-  if (!query) {
-    return NextResponse.json({ error: 'Query parameter is required' }, { status: 400 });
-  }
-
   try {
+    const { searchParams } = new URL(request.url);
+    const query = searchParams.get('q');
+    const typeParam = searchParams.get('type');
+    const type = typeParam as 'book' | 'movie' | 'series' | undefined;
+    const genre = searchParams.get('genre');
+    const maxResults = Number(searchParams.get('limit')) || 10;
+
+    if (!query && !genre) {
+      return NextResponse.json(
+        { error: 'Either query or genre parameter is required' },
+        { status: 400 }
+      );
+    }
+
     let results;
-    switch (type) {
-      case 'book':
-        results = await searchBooks(query);
-        break;
-      case 'movie':
-        results = await searchMovies(query);
-        break;
-      case 'tv':
-        results = await searchTVShows(query);
-        break;
-      default:
-        // Search all types
-        const [books, movies, tvShows] = await Promise.all([
-          searchBooks(query),
-          searchMovies(query),
-          searchTVShows(query)
-        ]);
-        results = [...books, ...movies, ...tvShows];
+    if (genre) {
+      results = await searchByGenre(genre, type, maxResults);
+    } else if (query) {
+      results = await searchMedia(query, type, maxResults);
     }
 
     return NextResponse.json(results);

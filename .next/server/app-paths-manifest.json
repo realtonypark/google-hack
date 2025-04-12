@@ -1,6 +1,9 @@
 {
+  "/api/media/[id]/route": "app/api/media/[id]/route.js",
+  "/api/media/search/route": "app/api/media/search/route.js",
   "/page": "app/page.js",
   "/login/page": "app/login/page.js",
-  "/profile/page": "app/profile/page.js",
-  "/profile/[username]/page": "app/profile/[username]/page.js"
+  "/media/[id]/page": "app/media/[id]/page.js",
+  "/profile/[username]/page": "app/profile/[username]/page.js",
+  "/profile/page": "app/profile/page.js"
 }
