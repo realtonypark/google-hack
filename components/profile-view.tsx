@@ -24,6 +24,8 @@ import { format } from "date-fns"
 import { Timestamp } from 'firebase/firestore'
 import { updateFavoriteMedia } from "@/lib/firebase/firestore"
 import { useRouter } from "next/navigation"
+import { generateTasteSummary } from "@/lib/gemini/taste-summary"
+
 
 interface ProfileViewProps {
   profile: any
@@ -58,33 +60,6 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
   const [watchlist, setWatchlist] = useState<MediaItem[]>([]);
   const [isLoadingWatchlist, setIsLoadingWatchlist] = useState(true);
 
-  // Mock taste data
-  const tasteData = {
-    description:
-      "You're a cinematic explorer with a penchant for thought-provoking narratives. Your media choices reveal a mind that enjoys complex characters and intricate plots. While you appreciate the occasional blockbuster, you're drawn to stories that challenge conventions and offer fresh perspectives.",
-    genres: [
-      { name: "Drama", percentage: 35 },
-      { name: "Sci-Fi", percentage: 25 },
-      { name: "Thriller", percentage: 20 },
-      { name: "Fantasy", percentage: 15 },
-      { name: "Comedy", percentage: 5 },
-    ],
-    favoriteMedia: {
-      book: {
-        title: "The Lord of the Rings",
-        coverImage: "/placeholder.svg?height=400&width=250",
-      },
-      movie: {
-        title: "The Shawshank Redemption",
-        coverImage: "/placeholder.svg?height=400&width=250",
-      },
-      series: {
-        title: "Breaking Bad",
-        coverImage: "/placeholder.svg?height=400&width=250",
-      },
-    },
-  }
-
   const [editingMedia, setEditingMedia] = useState<{
     type: keyof FavoriteMediaCollection | null
     isOpen: boolean
@@ -92,6 +67,26 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
     type: null,
     isOpen: false
   })
+
+  const [tasteData, setTasteData] = useState<{
+    description: string
+  } | null>(null)
+  
+  useEffect(() => {
+    const fetchTasteData = async () => {
+      try {
+        const entries = await getUserMediaEntries(profile.id)
+        if (!entries || entries.length === 0) return
+  
+        const report = await generateTasteSummary(entries)
+        setTasteData({ description: report })
+      } catch (error) {
+        console.error("Failed to load AI taste data:", error)
+      }
+    }
+  
+    fetchTasteData()
+  }, [profile.id])
 
   const [favoriteMedia, setFavoriteMedia] = useState<FavoriteMediaCollection>({
     book: profile.favoriteMedia?.book || {
@@ -436,6 +431,10 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
 
   // Add function to get media entries for a specific date
   const getMediaEntriesForDate = (date: Date) => {
+    if (isLoadingLibrary) {
+      return []
+    }
+    
     if (!libraryEntries.length) {
       console.log('No library entries available');
       return [];
@@ -670,7 +669,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm">{tasteData.description}</p>
+              <p className="text-sm">{tasteData?.description}</p>
             </CardContent>
           </Card>
 
