@@ -11,18 +11,15 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { cn } from "@/lib/utils"
-import { searchMedia, addMediaToLibrary } from "@/lib/api"
+import { addMediaToLibrary } from "@/lib/api"
 import MediaSearchResults from "@/components/media-search-results"
+import { MediaItem } from "@/types/database"
+import { useDebouncedCallback } from 'use-debounce'
 
 const formSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  type: z.enum(["book", "movie", "series"], {
-    required_error: "Please select a media type",
-  }),
   date: z.date().optional(),
   tags: z.string().optional(),
   notes: z.string().optional(),
@@ -33,76 +30,87 @@ export default function AddMediaForm() {
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
   const [isSearching, setIsSearching] = useState(false)
-  const [searchResults, setSearchResults] = useState<any[]>([])
-  const [selectedMedia, setSelectedMedia] = useState<any>(null)
+  const [searchResults, setSearchResults] = useState<MediaItem[]>([])
+  const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      title: "",
-      type: "movie",
       tags: "",
       notes: "",
       addToWatchlist: false,
     },
   })
 
-  const handleSearch = async () => {
-    if (!searchQuery) return
-
-    setIsSearching(true)
-    try {
-      const results = await searchMedia(searchQuery, form.getValues("type"))
-      setSearchResults(results)
-    } catch (error) {
-      console.error("Search failed:", error)
-      toast({
-        title: "Search failed",
-        description: "Failed to search for media. Please try again.",
-        variant: "destructive",
-      })
-      // Mock data for demo
-      setSearchResults([
-        {
-          id: "1",
-          title: "The Shawshank Redemption",
-          type: "movie",
-          coverImage: "/placeholder.svg?height=400&width=250",
-          year: "1994",
-          genres: ["Drama"],
-        },
-        {
-          id: "2",
-          title: "The Shining",
-          type: "movie",
-          coverImage: "/placeholder.svg?height=400&width=250",
-          year: "1980",
-          genres: ["Horror"],
-        },
-      ])
-    } finally {
-      setIsSearching(false)
+  const performSearch = useDebouncedCallback(async (query: string) => {
+    if (query.length < 2) {
+      setSearchResults([]);
+      return;
     }
-  }
 
-  const selectMedia = (media: any) => {
-    setSelectedMedia(media)
-    form.setValue("title", media.title)
-    setSearchResults([])
-  }
+    setIsSearching(true);
+    
+    try {
+      console.log('Performing search for:', query);
+      const response = await fetch(`/api/media/search?q=${encodeURIComponent(query)}`);
+      console.log('Search response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`Search failed with status ${response.status}`);
+      }
+      
+      const results = await response.json();
+      console.log('Search results:', results);
+      
+      if (!Array.isArray(results)) {
+        throw new Error('Invalid results format received');
+      }
+      
+      setSearchResults(results);
+    } catch (error) {
+      console.error("Search failed:", error);
+      toast({
+        title: "Search Error",
+        description: error instanceof Error ? error.message : 'Failed to search media',
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  }, 300);
+
+  const handleSearchInput = (value: string) => {
+    setSearchQuery(value);
+    performSearch(value);
+  };
+
+  const handleSelectMedia = (media: MediaItem) => {
+    setSelectedMedia(media);
+    setSearchResults([]);
+    setSearchQuery("");
+  };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!selectedMedia) {
+      toast({
+        title: "Error",
+        description: "Please select a media item first",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const mediaData = {
         ...values,
-        ...(selectedMedia ? { mediaId: selectedMedia.id } : {}),
+        mediaId: selectedMedia.id,
       }
 
       await addMediaToLibrary(mediaData)
 
       toast({
         title: "Added to library",
-        description: `${values.title} has been added to your library.`,
+        description: `${selectedMedia.title} has been added to your library.`,
       })
 
       // Reset form
@@ -121,45 +129,32 @@ export default function AddMediaForm() {
 
   return (
     <div className="space-y-8">
+      <div>
+        <h2 className="text-2xl font-semibold">Log your media</h2>
+        <p className="text-sm text-muted-foreground">What did you watch/read?</p>
+      </div>
+
       <div className="space-y-4">
-        <div>
-          <h2 className="text-xl font-semibold">Search for Media</h2>
-          <p className="text-sm text-muted-foreground">Find books, movies, or TV shows to add to your library</p>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search for books, movies or TV shows..."
+            className="pl-8"
+            value={searchQuery}
+            onChange={(e) => handleSearchInput(e.target.value)}
+          />
+          {isSearching && (
+            <div className="absolute right-2.5 top-2.5">
+              <Loader2 className="h-4 w-4 animate-spin" />
+            </div>
+          )}
         </div>
 
-        <div className="flex gap-2">
-          <Select value={form.getValues("type")} onValueChange={(value) => form.setValue("type", value as any)}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Media Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="book">Book</SelectItem>
-              <SelectItem value="movie">Movie</SelectItem>
-              <SelectItem value="series">TV Series</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <div className="relative flex-1">
-            <Input
-              placeholder="Search by title..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            />
-            <Button
-              size="sm"
-              variant="ghost"
-              className="absolute right-0 top-0 h-full px-3"
-              onClick={handleSearch}
-              disabled={isSearching}
-            >
-              {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              <span className="sr-only">Search</span>
-            </Button>
+        {searchResults.length > 0 && (
+          <div className="max-w-4xl">
+            <MediaSearchResults results={searchResults} onSelect={handleSelectMedia} />
           </div>
-        </div>
-
-        {searchResults.length > 0 && <MediaSearchResults results={searchResults} onSelect={selectMedia} />}
+        )}
 
         {selectedMedia && (
           <div className="flex items-center gap-4 p-4 border rounded-lg bg-muted/50">
@@ -173,10 +168,10 @@ export default function AddMediaForm() {
             <div>
               <h3 className="font-medium">{selectedMedia.title}</h3>
               <p className="text-sm text-muted-foreground">
-                {selectedMedia.type} • {selectedMedia.year}
+                {selectedMedia.type} • {selectedMedia.releaseDate ? new Date(selectedMedia.releaseDate).getFullYear() : 'N/A'}
               </p>
               <div className="flex gap-1 mt-1">
-                {selectedMedia.genres.map((genre: string) => (
+                {selectedMedia.genres?.slice(0, 3).map((genre) => (
                   <span key={genre} className="text-xs bg-secondary px-2 py-0.5 rounded">
                     {genre}
                   </span>
@@ -189,39 +184,27 @@ export default function AddMediaForm() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div>
-            <h2 className="text-xl font-semibold">Add Details</h2>
-            <p className="text-sm text-muted-foreground">Customize information about this media</p>
-          </div>
-
-          <FormField
-            control={form.control}
-            name="title"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Title</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
           <FormField
             control={form.control}
             name="date"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel>Date Watched/Read</FormLabel>
+                <FormLabel>When did you watch/read it?</FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
                       <Button
                         variant={"outline"}
-                        className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                        className={cn(
+                          "w-[240px] pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
                       >
-                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                        {field.value ? (
+                          format(field.value, "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                       </Button>
                     </FormControl>
@@ -231,12 +214,16 @@ export default function AddMediaForm() {
                       mode="single"
                       selected={field.value}
                       onSelect={field.onChange}
-                      disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                      disabled={(date) =>
+                        date > new Date() || date < new Date("1900-01-01")
+                      }
                       initialFocus
                     />
                   </PopoverContent>
                 </Popover>
-                <FormDescription>When did you watch or read this?</FormDescription>
+                <FormDescription>
+                  Select when you watched or read this media
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -249,9 +236,11 @@ export default function AddMediaForm() {
               <FormItem>
                 <FormLabel>Tags</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="action, favorite, rewatched" />
+                  <Input placeholder="e.g. 'thought-provoking', 'funny', 'rewatched'" {...field} />
                 </FormControl>
-                <FormDescription>Separate tags with commas</FormDescription>
+                <FormDescription>
+                Add tags, comma separated
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -264,14 +253,23 @@ export default function AddMediaForm() {
               <FormItem>
                 <FormLabel>Notes</FormLabel>
                 <FormControl>
-                  <Textarea placeholder="Your thoughts about this media..." className="resize-none" {...field} />
+                  <Textarea
+                    placeholder="e.g. 'I feel an underlying nostalgia for yesterday's worlds that have never been'"
+                    className="resize-none"
+                    {...field}
+                  />
                 </FormControl>
+                <FormDescription>
+                Add your thoughts or notes about this media 
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
 
-          <Button type="submit">Add to Library</Button>
+          <Button type="submit" disabled={!selectedMedia}>
+            Add to Library
+          </Button>
         </form>
       </Form>
     </div>

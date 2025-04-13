@@ -15,6 +15,8 @@ import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recha
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { toast } from "@/components/ui/use-toast"
+import { MediaItem } from "@/types/database"
 
 interface ProfileViewProps {
   profile: any
@@ -27,9 +29,9 @@ interface FavoriteMedia {
 }
 
 interface FavoriteMediaCollection {
-  book: FavoriteMedia
-  movie: FavoriteMedia
-  series: FavoriteMedia
+  book: { title: string; coverImage: string }
+  movie: { title: string; coverImage: string }
+  series: { title: string; coverImage: string }
 }
 
 export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
@@ -37,12 +39,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [searchQuery, setSearchQuery] = useState("")
   const [isSearching, setIsSearching] = useState(false)
-  const [searchResults, setSearchResults] = useState<Array<{
-    id: string
-    title: string
-    coverImage: string
-    year: string
-  }>>([])
+  const [searchResults, setSearchResults] = useState<MediaItem[]>([])
   const [profileImage, setProfileImage] = useState(profile.image || "/placeholder.svg?height=128&width=128")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -74,7 +71,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
   }
 
   const [editingMedia, setEditingMedia] = useState<{
-    type: 'book' | 'movie' | 'series' | null
+    type: keyof FavoriteMediaCollection | null
     isOpen: boolean
   }>({
     type: null,
@@ -167,7 +164,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
     ],
   }
 
-  const handleEditMedia = (type: 'book' | 'movie' | 'series') => {
+  const handleEditMedia = (type: keyof FavoriteMediaCollection) => {
     if (isOwnProfile) {
       setEditingMedia({ type, isOpen: true })
     }
@@ -187,44 +184,46 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
     }
   }
 
-  // Mock search results for demo
-  const mockSearchResults = [
-    {
-      id: "1",
-      title: "The Lord of the Rings: The Fellowship of the Ring",
-      coverImage: "/placeholder.svg",
-      year: "2001"
-    },
-    {
-      id: "2",
-      title: "The Lord of the Rings: The Two Towers",
-      coverImage: "/placeholder.svg",
-      year: "2002"
-    },
-    {
-      id: "3",
-      title: "The Lord of the Rings: The Return of the King",
-      coverImage: "/placeholder.svg",
-      year: "2003"
-    }
-  ]
-
-  const handleSearch = (query: string) => {
+  const handleSearch = async (query: string) => {
     setSearchQuery(query)
     if (query.length > 2) {
       setIsSearching(true)
-      // Simulate API call delay
-      setTimeout(() => {
-        setSearchResults(mockSearchResults)
-        setIsSearching(false)
-      }, 500)
+      try {
+        const response = await fetch(`/api/media/search?q=${encodeURIComponent(query)}&type=${editingMedia.type}`);
+        if (!response.ok) {
+          throw new Error('Search failed');
+        }
+        const results = await response.json();
+        setSearchResults(results);
+      } catch (error) {
+        console.error('Search failed:', error);
+        toast({
+          title: "Search Error",
+          description: "Failed to search for media",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSearching(false);
+      }
     } else {
-      setSearchResults([])
+      setSearchResults([]);
     }
   }
 
-  const handleSelectMedia = (media: { title: string, coverImage: string }) => {
-    handleSaveMedia(media.title, media.coverImage)
+  const handleSelectMedia = (media: MediaItem) => {
+    if (editingMedia.type) {
+      const mediaType = editingMedia.type as keyof FavoriteMediaCollection;
+      setFavoriteMedia(prev => ({
+        ...prev,
+        [mediaType]: {
+          title: media.title,
+          coverImage: media.coverImage || "/placeholder.svg",
+        }
+      }));
+      setEditingMedia({ type: null, isOpen: false });
+      setSearchQuery("");
+      setSearchResults([]);
+    }
   }
 
   const handleProfileImageClick = () => {
@@ -749,9 +748,9 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
 
       {/* Edit Media Dialog */}
       <Dialog open={editingMedia.isOpen} onOpenChange={(open) => {
-        setEditingMedia({ type: null, isOpen: open })
-        setSearchQuery("")
-        setSearchResults([])
+        setEditingMedia({ type: null, isOpen: open });
+        setSearchQuery("");
+        setSearchResults([]);
       }}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -769,6 +768,11 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
               />
+              {isSearching && (
+                <div className="absolute right-2.5 top-2.5">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+              )}
             </div>
 
             <div className="relative min-h-[200px]">
@@ -787,7 +791,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                       >
                         <div className="w-12 h-16 relative rounded overflow-hidden">
                           <Image
-                            src={result.coverImage}
+                            src={result.coverImage || "/placeholder.svg"}
                             alt={result.title}
                             fill
                             className="object-cover"
@@ -795,7 +799,9 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                         </div>
                         <div>
                           <h4 className="font-medium text-sm">{result.title}</h4>
-                          <p className="text-xs text-muted-foreground">{result.year}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {result.type} • {result.releaseDate ? new Date(result.releaseDate).getFullYear() : 'N/A'}
+                          </p>
                         </div>
                       </div>
                     ))}
@@ -809,37 +815,6 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 </div>
               )}
             </div>
-
-            <div className="space-y-1">
-              <h4 className="text-sm font-medium">Current Selection</h4>
-              <div className="flex items-center gap-3 p-2 rounded-lg border bg-muted">
-                <div className="w-12 h-16 relative rounded overflow-hidden">
-                  <Image
-                    src={editingMedia.type ? favoriteMedia[editingMedia.type as keyof FavoriteMediaCollection].coverImage : "/placeholder.svg"}
-                    alt={editingMedia.type ? favoriteMedia[editingMedia.type as keyof FavoriteMediaCollection].title : ""}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <div>
-                  <h4 className="font-medium text-sm">
-                    {editingMedia.type ? favoriteMedia[editingMedia.type as keyof FavoriteMediaCollection].title : ""}
-                  </h4>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setEditingMedia({ type: null, isOpen: false })
-                setSearchQuery("")
-                setSearchResults([])
-              }}
-            >
-              Cancel
-            </Button>
           </div>
         </DialogContent>
       </Dialog>
