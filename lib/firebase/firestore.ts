@@ -1,4 +1,4 @@
-import { db } from '@/lib/firebase/firebase';
+import { db } from '@/lib/firebase/firebase';
 import { collection, doc, getDoc, setDoc, updateDoc, query, where, getDocs, addDoc, Timestamp, DocumentReference, DocumentData } from 'firebase/firestore';
 import { MediaEntry, MediaType, UserProfile, MediaItem } from '@/types/database';
 
@@ -76,7 +76,6 @@ export async function addMediaEntry(
 
     const entryData: MediaEntry = {
       ...entry,
-      userId,
       createdAt: new Date(),
       updatedAt: new Date()
     };

@@ -1,10 +1,21 @@
-import { UserMediaLog } from "@/types/gemini"
-export function generateUserProfilePrompt(logs: UserMediaLog[]): string {
+import { MediaEntry } from "@/types/database"
+
+export function generateUserProfilePrompt(logs: MediaEntry[]): string {
   const snapshot = logs.map((item, idx) => {
-    const stars = "★".repeat(Math.round(item.rating))
-    return `${idx + 1}. "${item.title}" (${item.type}, ${stars})` +
-      (item.tag ? `\n   - Tags: ${item.tag}` : "") +
-      (item.review ? `\n   - Review: ${item.review}` : "")
+    const stars = "★".repeat(Math.round(item.rating || 0)) || "☆"
+
+    let entry = `${idx + 1}. "${item.title}" (${item.type}, ${stars})`
+
+    if (item.tag) {
+      entry += `\n   - Tags: ${item.tag}`
+    }
+
+    if (item.review) {
+      const review = item.review.replace(/\n+/g, " ").trim()
+      entry += `\n   - Review: ${review}`
+    }
+
+    return entry
   }).join("\n")
 
   return `

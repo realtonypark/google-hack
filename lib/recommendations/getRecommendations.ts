@@ -1,6 +1,6 @@
 // lib/recommendations/getRecommendations.ts
 
-import { getUserMediaLogs } from "@/lib/firebase/userLogs" // 🔧 너가 나중에 연결해야 할 유저 로그 함수
+import { getUserMediaEntries } from "@/lib/firebase/firestore"
 import { generateUserProfilePrompt } from "@/lib/gemini/prompts/profile"
 import { generateRecommendationPrompt } from "@/lib/gemini/prompts/recommendation"
 import { callGemini } from "@/lib/gemini/client"
@@ -8,7 +8,6 @@ import { parseRecommendationResponse } from "@/lib/gemini/parsers"
 import { matchRecommendationsFromFirestore } from "@/lib/gemini/matcher"
 
 import { MediaItem } from "@/types/database"
-import { UserMediaLog } from "@/types/gemini"
 
 export type RecommendationType = "personal" | "broaden"
 
@@ -21,8 +20,10 @@ export type RecommendationType = "personal" | "broaden"
  */
 export async function getRecommendations(type: RecommendationType, userId: string): Promise<MediaItem[]> {
   // Step 1: Load user logs
-  const logs: UserMediaLog[] = await getUserMediaLogs(userId)
+  const logs = await getUserMediaEntries(userId)
+
   console.log("📚 User logs loaded:", logs)
+
   // Step 2: Generate profile summary from logs
   const profilePrompt = generateUserProfilePrompt(logs)
 

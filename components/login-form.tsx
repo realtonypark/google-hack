@@ -4,7 +4,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Icons } from "@/components/icons"
-import { signInWithGoogle } from "@/lib/firebase/firebase"
+import { signInWithGoogle } from "@/lib/firebase/firebase"
 import { useRouter } from "next/navigation"
 
 

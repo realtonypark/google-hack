@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/lib/authContext"
-import { signOut } from "@/lib/firebase/firebase"
+import { signOut } from "@/lib/firebase/firebase"
 
 export default function Navigation() {
   const pathname = usePathname()

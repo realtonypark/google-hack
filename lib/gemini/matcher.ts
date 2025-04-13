@@ -2,7 +2,7 @@
 
 import { ParsedRecommendation } from "./parsers"
 import { MediaItem } from "@/types/database"
-import { db } from "@/lib/firebase/firebase"
+import { db } from "@/lib/firebase/firebase"
 import {
   collection,
   getDocs,
@@ -35,7 +35,7 @@ export async function matchRecommendationsFromFirestore(
   const mediaRef = collection(db, "media");
   
   // Maximum recommendations to return
-  const MAX_RECOMMENDATIONS = 5;
+  const MAX_RECOMMENDATIONS = 20;
   
   // Process each recommendation until we reach our limit
   for (const rec of parsed) {

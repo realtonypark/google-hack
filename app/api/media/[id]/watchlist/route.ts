@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/firebase/firebase';
-import { db } from '@/lib/firebase';
+import { db } from '@/lib/firebase/firebase';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { getAuth } from 'firebase-admin/auth';
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useAuth } from "@/lib/authContext"
 import { getRecommendations } from "@/lib/api"
 import MediaCard from "@/components/media-card"
@@ -14,33 +14,34 @@ interface RecommendationSectionProps {
 }
 
 export default function RecommendationSection({ title, description, type }: RecommendationSectionProps) {
-  // Replace useSession with useAuth
   const { user, loading: authLoading } = useAuth()
   const [recommendations, setRecommendations] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    console.log("🧩 useEffect triggered", { user, authLoading })
+  const hasFetchedRef = useRef<{ [key: string]: boolean }>({})
 
+  useEffect(() => {
+    if (authLoading || !user) return
+    if (hasFetchedRef.current[type]) {
+      console.log("⛔️ Already fetched for", type)
+      return
+    }
+  
     const fetchRecommendations = async () => {
-      console.log("📡 inside fetchRecommendations")
-      // Wait for auth to be ready and user to be available
-      if (authLoading) return
-      if (user) {
-        setIsLoading(true)
-        try {
-          const data = await getRecommendations(type, user.uid)
-          console.log("💡 Recommendations for", type, "=>", data)
-          setRecommendations(data)
-        } catch (error) {
-          console.error("Failed to fetch recommendations:", error)
-          // Use placeholder data for demo
-        } finally {
-          setIsLoading(false)
-        }
+      console.log("📡 inside fetchRecommendations", type)
+      setIsLoading(true)
+      try {
+        const data = await getRecommendations(type, user.uid)
+        console.log("💡 Recommendations for", type, "=>", data)
+        setRecommendations(data)
+        hasFetchedRef.current[type] = true
+      } catch (error) {
+        console.error("Failed to fetch recommendations:", error)
+      } finally {
+        setIsLoading(false)
       }
     }
-
+  
     fetchRecommendations()
   }, [user, authLoading, type])
 
@@ -72,4 +73,3 @@ export default function RecommendationSection({ title, description, type }: Reco
     </section>
   )
 }
-

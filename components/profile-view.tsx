@@ -18,10 +18,10 @@ import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/use-toast"
 import { MediaItem, MediaEntry, MediaType } from "@/types/database"
 import { RatingDistribution } from "@/components/rating-distribution"
-import { getUserMediaEntries, getUserWatchlist } from "@/lib/firebase/firestore"
+import { getUserMediaEntries, getUserWatchlist } from "@/lib/firebase/firestore"
 import { format } from "date-fns"
 import { Timestamp } from 'firebase/firestore'
-import { updateFavoriteMedia } from "@/lib/firebase/firestore"
+import { updateFavoriteMedia } from "@/lib/firebase/firestore"
 import { useRouter } from "next/navigation"
 
 interface ProfileViewProps {

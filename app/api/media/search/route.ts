@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { searchBooks } from '@/lib/services/externalMediaService';
 import { MediaItem } from '@/types/database';
-import { db } from '@/lib/firebase';
+import { db } from '@/lib/firebase/firebase';
 import { doc, setDoc, collection, query as firestoreQuery, where, getDocs } from 'firebase/firestore';
 
 const TMDB_API = 'https://api.themoviedb.org/3';
