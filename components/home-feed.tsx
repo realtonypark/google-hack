@@ -291,7 +291,7 @@ export default function HomeFeed() {
                         className="bg-pink-500 hover:bg-pink-600 text-white"
                         onClick={(e) => {
                           e.stopPropagation();
-                          router.push(`/profile/${user.uid}/analysis`);
+                          router.push(`/profile/${user.uid}/ai-report`);
                         }}
                       >
                         See AI taste report
