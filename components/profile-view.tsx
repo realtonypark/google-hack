@@ -530,134 +530,76 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               </div>
               <CardTitle className="mt-4">{profile.name}</CardTitle>
               <CardDescription>@{profile.username}</CardDescription>
-
-              {!isOwnProfile && <Button className="mt-4 w-full">Follow</Button>}
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-sm font-medium mb-2">Favorite Media (Show your identity!)</h3>
+                  <h3 className="text-sm font-medium mb-2">Favorite Media</h3>
                   <div className="grid grid-cols-3 gap-2">
-                    <div className="text-center">
-                      <div 
-                        className={`relative w-full aspect-[2/3] rounded-md overflow-hidden mb-1 ${isOwnProfile ? 'cursor-pointer hover:opacity-80 transition-opacity group' : ''}`}
-                        onClick={() => handleEditMedia('book')}
-                      >
-                        <Image
-                          src={favoriteMedia.book.coverImage || "/placeholder.svg"}
-                          alt={favoriteMedia.book.title}
-                          fill
-                          className="object-cover"
-                        />
-                        {isOwnProfile && (
-                          <Button 
-                            size="icon" 
-                            variant="outline" 
-                            className="absolute bottom-1 right-1 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-background"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="h-3 w-3"
-                            >
-                              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                              <path d="m15 5 4 4" />
-                            </svg>
-                          </Button>
-                        )}
+                    {(['book', 'movie', 'tv'] as const).map((type) => (
+                      <div key={type} className="text-center">
+                        <div 
+                          className={`relative w-full aspect-[2/3] rounded-md overflow-hidden mb-1 ${isOwnProfile ? 'cursor-pointer hover:opacity-80 transition-opacity group' : ''} ${!profile.favoriteMedia?.[type] ? 'bg-muted' : ''}`}
+                          onClick={() => isOwnProfile && handleEditMedia(type === 'tv' ? 'series' : type)}
+                        >
+                          {profile.favoriteMedia?.[type] && (
+                            <>
+                              <Image
+                                src={profile.favoriteMedia[type].coverImage}
+                                alt={profile.favoriteMedia[type].title}
+                                fill
+                                className="object-cover"
+                              />
+                              {isOwnProfile && (
+                                <Button 
+                                  size="icon" 
+                                  variant="outline" 
+                                  className="absolute bottom-1 right-1 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-background"
+                                >
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="h-3 w-3"
+                                  >
+                                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                    <path d="m15 5 4 4" />
+                                  </svg>
+                                </Button>
+                              )}
+                            </>
+                          )}
+                          {isOwnProfile && !profile.favoriteMedia?.[type] && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="h-6 w-6 text-muted-foreground"
+                              >
+                                <path d="M12 5v14M5 12h14" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex justify-center">
+                          <Badge variant="outline" className="text-xs">
+                            {type === 'movie' && <Film className="h-3 w-3 mr-1" />}
+                            {type === 'book' && <BookOpen className="h-3 w-3 mr-1" />}
+                            {type === 'tv' && <Tv className="h-3 w-3 mr-1" />}
+                            <span>{type === 'tv' ? 'Series' : type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="flex justify-center">
-                        <Badge variant="outline" className="text-xs">
-                          <BookOpen className="h-3 w-3 mr-1" />
-                          Book
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div 
-                        className={`relative w-full aspect-[2/3] rounded-md overflow-hidden mb-1 ${isOwnProfile ? 'cursor-pointer hover:opacity-80 transition-opacity group' : ''}`}
-                        onClick={() => handleEditMedia('movie')}
-                      >
-                        <Image
-                          src={favoriteMedia.movie.coverImage || "/placeholder.svg"}
-                          alt={favoriteMedia.movie.title}
-                          fill
-                          className="object-cover"
-                        />
-                        {isOwnProfile && (
-                          <Button 
-                            size="icon" 
-                            variant="outline" 
-                            className="absolute bottom-1 right-1 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-background"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="h-3 w-3"
-                            >
-                              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                              <path d="m15 5 4 4" />
-                            </svg>
-                          </Button>
-                        )}
-                      </div>
-                      <div className="flex justify-center">
-                        <Badge variant="outline" className="text-xs">
-                          <Film className="h-3 w-3 mr-1" />
-                          Movie
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div 
-                        className={`relative w-full aspect-[2/3] rounded-md overflow-hidden mb-1 ${isOwnProfile ? 'cursor-pointer hover:opacity-80 transition-opacity group' : ''}`}
-                        onClick={() => handleEditMedia('series')}
-                      >
-                        <Image
-                          src={favoriteMedia.series.coverImage || "/placeholder.svg"}
-                          alt={favoriteMedia.series.title}
-                          fill
-                          className="object-cover"
-                        />
-                        {isOwnProfile && (
-                          <Button 
-                            size="icon" 
-                            variant="outline" 
-                            className="absolute bottom-1 right-1 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-background"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="h-3 w-3"
-                            >
-                              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                              <path d="m15 5 4 4" />
-                            </svg>
-                          </Button>
-                        )}
-                      </div>
-                      <div className="flex justify-center">
-                        <Badge variant="outline" className="text-xs">
-                          <Tv className="h-3 w-3 mr-1" />
-                          Series
-                        </Badge>
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
 
@@ -701,8 +643,8 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                   <CardTitle>Taste Report</CardTitle>
                   <CardDescription>AI-generated analysis of your media preferences</CardDescription>
                 </div>
-                <Button variant="ghost" className="text-primary hover:text-primary">
-                  See full analysis
+                <Button variant="default" className="bg-pink-500 hover:bg-pink-600 text-white">
+                  See full AI report
                   <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
               </div>

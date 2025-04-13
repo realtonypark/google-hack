@@ -734,6 +734,9 @@ video {
 .z-\[1\] {
   z-index: 1;
 }
+.col-span-2 {
+  grid-column: span 2 / span 2;
+}
 .-mx-1 {
   margin-left: -0.25rem;
   margin-right: -0.25rem;
@@ -815,6 +818,12 @@ video {
 }
 .mt-auto {
   margin-top: auto;
+}
+.mt-3 {
+  margin-top: 0.75rem;
+}
+.mb-3 {
+  margin-bottom: 0.75rem;
 }
 .line-clamp-1 {
   overflow: hidden;
@@ -943,6 +952,9 @@ video {
 .h-svh {
   height: 100svh;
 }
+.h-36 {
+  height: 9rem;
+}
 .max-h-96 {
   max-height: 24rem;
 }
@@ -1070,6 +1082,9 @@ video {
 .w-screen {
   width: 100vw;
 }
+.w-24 {
+  width: 6rem;
+}
 .min-w-0 {
   min-width: 0px;
 }
@@ -1112,6 +1127,12 @@ video {
 }
 .max-w-md {
   max-width: 28rem;
+}
+.max-w-sm {
+  max-width: 24rem;
+}
+.max-w-\[200px\] {
+  max-width: 200px;
 }
 .flex-1 {
   flex: 1 1 0%;
@@ -1515,6 +1536,17 @@ video {
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
 }
+.bg-gradient-to-t {
+  background-image: linear-gradient(to top, var(--tw-gradient-stops));
+}
+.from-black\/60 {
+  --tw-gradient-from: rgb(0 0 0 / 0.6) var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(0 0 0 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+.to-transparent {
+  --tw-gradient-to: transparent var(--tw-gradient-to-position);
+}
 .fill-current {
   fill: currentColor;
 }
@@ -1700,6 +1732,9 @@ video {
 .text-xs {
   font-size: 0.75rem;
   line-height: 1rem;
+}
+.text-\[10px\] {
+  font-size: 10px;
 }
 .font-bold {
   font-weight: 700;
@@ -2125,6 +2160,11 @@ video {
   background-color: hsl(var(--secondary) / 0.8);
 }
  
+.hover\:bg-pink-600:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(219 39 119 / var(--tw-bg-opacity, 1));
+}
+ 
 .hover\:text-accent-foreground:hover {
   color: hsl(var(--accent-foreground));
 }
@@ -2143,6 +2183,11 @@ video {
  
 .hover\:text-primary-foreground:hover {
   color: hsl(var(--primary-foreground));
+}
+ 
+.hover\:text-pink-600:hover {
+  --tw-text-opacity: 1;
+  color: rgb(219 39 119 / var(--tw-text-opacity, 1));
 }
  
 .hover\:underline:hover {

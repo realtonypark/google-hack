@@ -262,7 +262,7 @@ export default function MediaDetailPage() {
               <Rating
                 value={userRating}
                 onChange={handleRatingChange}
-                readOnly={!!userEntry}
+                readOnly={true}
               />
             </div>
 
