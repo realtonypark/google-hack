@@ -1,10 +1,7 @@
 {
-  "/api/media/[id]/route": "app/api/media/[id]/route.js",
-  "/api/media/[id]/ratings/route": "app/api/media/[id]/ratings/route.js",
-  "/api/media/search/route": "app/api/media/search/route.js",
   "/profile/[username]/page": "app/profile/[username]/page.js",
+  "/media/[id]/page": "app/media/[id]/page.js",
   "/page": "app/page.js",
-  "/add/page": "app/add/page.js",
   "/login/page": "app/login/page.js",
-  "/media/[id]/page": "app/media/[id]/page.js"
+  "/add/page": "app/add/page.js"
 }

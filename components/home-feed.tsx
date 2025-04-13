@@ -300,7 +300,7 @@ export default function HomeFeed() {
                           router.push(`/profile/${user.uid}/analysis`);
                         }}
                       >
-                        See full analysis
+                        See AI taste report
                         <ChevronRight className="ml-1 h-4 w-4" />
                       </Button>
                     </div>
