@@ -15,6 +15,8 @@ import { RatingDistribution } from "@/components/rating-distribution"
 import { format } from "date-fns"
 import { auth } from "@/lib/firebase/firebase"
 import { getUserMediaEntries } from "@/lib/firebase/firestore"
+import { getDoc, doc } from "firebase/firestore"
+import { db } from "@/lib/firebase/firebase"
 
 export default function MediaDetailPage() {
   const { id } = useParams()
@@ -52,6 +54,13 @@ export default function MediaDetailPage() {
           if (userEntry) {
             setUserEntry(userEntry)
             setUserRating(userEntry.rating || 0)
+          }
+
+          // Check if media is in watchlist
+          const userDoc = await getDoc(doc(db, 'users', user.uid))
+          if (userDoc.exists()) {
+            const watchlist = userDoc.data().watchlist || []
+            setInWatchlist(watchlist.includes(id))
           }
         }
       } catch (error) {
@@ -100,10 +109,22 @@ export default function MediaDetailPage() {
 
   const toggleWatchlist = async () => {
     try {
+      const user = auth.currentUser;
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to update your watchlist",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const token = await user.getIdToken();
       const response = await fetch(`/api/media/${id}/watchlist`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ add: !inWatchlist }),
       })

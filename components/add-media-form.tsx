@@ -19,7 +19,8 @@ import MediaSearchResults from "@/components/media-search-results"
 import { MediaItem, MediaType } from "@/types/database"
 import { useDebouncedCallback } from 'use-debounce'
 import { Rating } from "@/components/ui/rating"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
+import { auth } from "@/lib/firebase/firebase"
 
 const formSchema = z.object({
   date: z.date().optional(),
@@ -30,6 +31,7 @@ const formSchema = z.object({
 })
 
 export default function AddMediaForm() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
@@ -122,35 +124,38 @@ export default function AddMediaForm() {
     if (!selectedMedia) {
       toast({
         title: "Error",
-        description: "Please select a media item first",
+        description: "Please select a media to add",
         variant: "destructive",
-      });
-      return;
+      })
+      return
     }
 
     try {
-      const mediaData = {
-        ...values,
+      await addMediaToLibrary({
         mediaId: selectedMedia.id,
+        date: values.date,
+        tags: values.tags,
+        notes: values.notes,
+        rating: values.rating,
         title: selectedMedia.title,
-        coverImage: selectedMedia.coverImage || '',
-      }
-
-      await addMediaToLibrary(mediaData)
-
-      toast({
-        title: "Added to library",
-        description: `${selectedMedia.title} has been added to your library.`,
+        coverImage: selectedMedia.coverImage,
       })
 
-      // Reset form
-      form.reset()
-      setSelectedMedia(null)
-      setSearchQuery("")
-    } catch {
       toast({
-        title: "Failed to add",
-        description: "There was an error adding this to your library.",
+        title: "Success",
+        description: "Media added to your library",
+      })
+
+      // Navigate to the profile page after successful addition
+      const user = auth.currentUser
+      if (user) {
+        router.push(`/profile/${user.uid}`)
+      }
+    } catch (error) {
+      console.error('Error adding media:', error)
+      toast({
+        title: "Error",
+        description: "Failed to add media to library",
         variant: "destructive",
       })
     }
@@ -350,7 +355,7 @@ export default function AddMediaForm() {
                   <Input placeholder="e.g. 'thought-provoking', 'funny', 'rewatched'" {...field} />
                 </FormControl>
                 <FormDescription>
-                Add tags, comma separated
+                Add tags to help us better recommend you contents, comma separated
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -371,7 +376,7 @@ export default function AddMediaForm() {
                   />
                 </FormControl>
                 <FormDescription>
-                Add your thoughts or notes about this media 
+                Add your thoughts or notes about this media to help us better recommend you contents
                 </FormDescription>
                 <FormMessage />
               </FormItem>

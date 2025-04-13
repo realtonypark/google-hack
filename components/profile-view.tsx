@@ -18,10 +18,11 @@ import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/use-toast"
 import { MediaItem, MediaEntry, MediaType } from "@/types/database"
 import { RatingDistribution } from "@/components/rating-distribution"
-import { getUserMediaEntries } from "@/lib/firebase/firestore"
+import { getUserMediaEntries, getUserWatchlist } from "@/lib/firebase/firestore"
 import { format } from "date-fns"
 import { Timestamp } from 'firebase/firestore'
 import { updateFavoriteMedia } from "@/lib/firebase/firestore"
+import { useRouter } from "next/navigation"
 
 interface ProfileViewProps {
   profile: any
@@ -40,6 +41,7 @@ interface FavoriteMediaCollection {
 }
 
 export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
+  const router = useRouter()
   const [date, setDate] = useState<Date | undefined>(new Date())
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [searchQuery, setSearchQuery] = useState("")
@@ -51,6 +53,9 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(true);
   const [selectedMediaType, setSelectedMediaType] = useState<MediaType | 'all'>('all');
   const [hoveredDate, setHoveredDate] = useState<Date | null>(null);
+  const [activeTab, setActiveTab] = useState<'library' | 'watchlist'>('library');
+  const [watchlist, setWatchlist] = useState<MediaItem[]>([]);
+  const [isLoadingWatchlist, setIsLoadingWatchlist] = useState(true);
 
   // Mock taste data
   const tasteData = {
@@ -365,40 +370,16 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
 
   useEffect(() => {
     const fetchLibrary = async () => {
-      if (!profile?.id) {
-        console.log('No profile ID available');
-        return;
-      }
-      
+      if (!profile.id) return;
+      setIsLoadingLibrary(true);
       try {
-        setIsLoadingLibrary(true);
-        console.log('Starting fetchLibrary for user:', profile.id);
         const entries = await getUserMediaEntries(profile.id);
-        console.log('Fetched library entries:', entries);
-        
-        // Filter out entries without required data
-        const validEntries = entries.filter(entry => {
-          const isValid = entry.title && entry.watchedAt && entry.type;
-          if (!isValid) {
-            console.log('Invalid entry:', entry);
-          }
-          return isValid;
-        });
-        
-        console.log('Valid entries:', validEntries);
-        setLibraryEntries(validEntries);
+        setLibraryEntries(entries);
       } catch (error) {
-        console.error('Error in fetchLibrary:', error);
-        if (error instanceof Error) {
-          console.error('Error details:', {
-            message: error.message,
-            stack: error.stack,
-            name: error.name
-          });
-        }
+        console.error('Error fetching library:', error);
         toast({
           title: "Error",
-          description: "Failed to load media library",
+          description: "Failed to load library",
           variant: "destructive",
         });
       } finally {
@@ -406,9 +387,34 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
       }
     };
 
-    console.log('Profile ID:', profile?.id);
+    const fetchWatchlist = async () => {
+      if (!profile.id) return;
+      setIsLoadingWatchlist(true);
+      try {
+        const watchlistIds = await getUserWatchlist(profile.id);
+        const watchlistItems = await Promise.all(
+          watchlistIds.map(async (id) => {
+            const response = await fetch(`/api/media/${id}`);
+            if (!response.ok) throw new Error('Failed to fetch media');
+            return response.json();
+          })
+        );
+        setWatchlist(watchlistItems);
+      } catch (error) {
+        console.error('Error fetching watchlist:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load watchlist",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingWatchlist(false);
+      }
+    };
+
     fetchLibrary();
-  }, [profile?.id]);
+    fetchWatchlist();
+  }, [profile.id]);
 
   // Add function to get media entries for a specific date
   const getMediaEntriesForDate = (date: Date) => {
@@ -521,52 +527,9 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                   <AvatarImage src={profileImage} />
                   <AvatarFallback>{profile.name?.charAt(0) || "U"}</AvatarFallback>
                 </Avatar>
-                {isOwnProfile && (
-                  <>
-                    <Button 
-                      size="icon" 
-                      variant="outline" 
-                      className="absolute bottom-0 right-0 rounded-full"
-                      onClick={handleProfileImageClick}
-                    >
-                      <span className="sr-only">Edit Avatar</span>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="h-4 w-4"
-                      >
-                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                        <path d="m15 5 4 4" />
-                      </svg>
-                    </Button>
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      className="hidden"
-                      accept="image/*"
-                      onChange={handleProfileImageChange}
-                    />
-                  </>
-                )}
               </div>
               <CardTitle className="mt-4">{profile.name}</CardTitle>
               <CardDescription>@{profile.username}</CardDescription>
-
-              <div className="flex gap-4 mt-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold">{profile.following || 0}</div>
-                  <div className="text-xs text-muted-foreground">Following</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold">{profile.followers || 0}</div>
-                  <div className="text-xs text-muted-foreground">Followers</div>
-                </div>
-              </div>
 
               {!isOwnProfile && <Button className="mt-4 w-full">Follow</Button>}
             </CardHeader>
@@ -703,7 +666,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                   <div className="space-y-4">
                     <div className="grid grid-cols-3 gap-4">
                       <div className="text-center">
-                        <div className="text-2xl font-bold">{ratingData.averageRating}</div>
+                        <div className="text-2xl font-bold">{ratingData.averageRating.toFixed(1)}</div>
                         <div className="text-xs text-muted-foreground">Average Rating</div>
                       </div>
                       <div className="text-center">
@@ -834,96 +797,184 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               <Tabs defaultValue="library">
                 <div className="flex items-center justify-between">
                   <CardTitle>Media Collection</CardTitle>
-                  <TabsList>
-                    <TabsTrigger value="library">Library</TabsTrigger>
-                    <TabsTrigger value="watchlist">Watchlist</TabsTrigger>
-                  </TabsList>
                 </div>
                 <CardDescription>Your personal media collection</CardDescription>
               </Tabs>
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="library">
-                <TabsContent value="library" className="mt-0">
+                <TabsList>
+                  <TabsTrigger value="library" onClick={() => setActiveTab('library')}>
+                    Library
+                  </TabsTrigger>
+                  <TabsTrigger value="watchlist" onClick={() => setActiveTab('watchlist')}>
+                    Watchlist
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="library" className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <Select
+                      value={selectedMediaType}
+                      onValueChange={(value) => setSelectedMediaType(value as MediaType | 'all')}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Filter by type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="movie">Movies</SelectItem>
+                        <SelectItem value="tv">TV Shows</SelectItem>
+                        <SelectItem value="book">Books</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <ScrollArea className="h-[400px]">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-1">
-                      {isLoadingLibrary ? (
-                        <div className="col-span-2 flex justify-center py-8">
-                          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                        </div>
-                      ) : libraryEntries.length === 0 ? (
-                        <div className="col-span-2 text-center py-8 text-muted-foreground">
-                          No media entries yet
+                    {activeTab === 'library' ? (
+                      isLoadingLibrary ? (
+                        <div className="flex justify-center items-center h-full">
+                          <Loader2 className="h-8 w-8 animate-spin" />
                         </div>
                       ) : (
-                        libraryEntries.map((item) => (
-                          <div key={item.id} className="flex gap-3 p-2 border rounded-lg">
-                            <div className="w-16 h-24 relative overflow-hidden rounded">
-                              <img
-                                src={item.coverImage || "/placeholder.svg"}
-                                alt={item.title}
-                                className="object-cover w-full h-full"
-                              />
-                            </div>
-                            <div className="flex flex-col justify-between">
-                              <div>
-                                <h3 className="font-medium line-clamp-1">{item.title}</h3>
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  {item.type === "movie" && <Film className="h-3 w-3" />}
-                                  {item.type === "book" && <BookOpen className="h-3 w-3" />}
-                                  {item.type === "tv" && <Tv className="h-3 w-3" />}
-                                  <span className="capitalize">{item.type}</span>
-                                  {item.rating > 0 && (
-                                    <>
-                                      <span>•</span>
-                                      <span>★ {item.rating}</span>
-                                    </>
-                                  )}
+                        <div className="space-y-2">
+                          {libraryEntries
+                            .filter(entry => selectedMediaType === 'all' || entry.type === selectedMediaType)
+                            .map((item) => (
+                              <div 
+                                key={item.id} 
+                                className="flex gap-3 p-2 border rounded-lg hover:bg-accent cursor-pointer"
+                                onClick={() => router.push(`/media/${item.mediaId}`)}
+                              >
+                                <div className="relative w-16 h-24">
+                                  <Image
+                                    src={item.coverImage || "/placeholder.svg"}
+                                    alt={item.title}
+                                    fill
+                                    className="object-cover rounded"
+                                  />
+                                </div>
+                                <div className="flex flex-col justify-between">
+                                  <div>
+                                    <h3 className="font-medium line-clamp-1">{item.title}</h3>
+                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                      {item.type === "movie" && <Film className="h-3 w-3" />}
+                                      {item.type === "book" && <BookOpen className="h-3 w-3" />}
+                                      {item.type === "tv" && <Tv className="h-3 w-3" />}
+                                      <span className="capitalize">{item.type}</span>
+                                      {item.rating > 0 && (
+                                        <>
+                                          <span>•</span>
+                                          <span>★ {item.rating}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center text-xs text-muted-foreground">
+                                    <CalendarIcon className="h-3 w-3 mr-1" />
+                                    Added: {formatDate(item.watchedAt)}
+                                  </div>
                                 </div>
                               </div>
-                              <div className="flex items-center text-xs text-muted-foreground">
-                                <CalendarIcon className="h-3 w-3 mr-1" />
-                                Added: {formatDate(item.watchedAt)}
+                            ))}
+                        </div>
+                      )
+                    ) : (
+                      isLoadingWatchlist ? (
+                        <div className="flex justify-center items-center h-full">
+                          <Loader2 className="h-8 w-8 animate-spin" />
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {watchlist
+                            .filter(item => selectedMediaType === 'all' || item.type === selectedMediaType)
+                            .map((item) => (
+                              <div 
+                                key={item.id} 
+                                className="flex gap-3 p-2 border rounded-lg hover:bg-accent cursor-pointer"
+                                onClick={() => router.push(`/media/${item.id}`)}
+                              >
+                                <div className="relative w-16 h-24">
+                                  <Image
+                                    src={item.coverImage || "/placeholder.svg"}
+                                    alt={item.title}
+                                    fill
+                                    className="object-cover rounded"
+                                  />
+                                </div>
+                                <div className="flex flex-col justify-between">
+                                  <div>
+                                    <h3 className="font-medium line-clamp-1">{item.title}</h3>
+                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                      {item.type === "movie" && <Film className="h-3 w-3" />}
+                                      {item.type === "book" && <BookOpen className="h-3 w-3" />}
+                                      {item.type === "tv" && <Tv className="h-3 w-3" />}
+                                      <span className="capitalize">{item.type}</span>
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
+                            ))}
+                        </div>
+                      )
+                    )}
                   </ScrollArea>
                 </TabsContent>
-                <TabsContent value="watchlist" className="mt-0">
+                <TabsContent value="watchlist" className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <Select
+                      value={selectedMediaType}
+                      onValueChange={(value) => setSelectedMediaType(value as MediaType | 'all')}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Filter by type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="movie">Movies</SelectItem>
+                        <SelectItem value="tv">TV Shows</SelectItem>
+                        <SelectItem value="book">Books</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <ScrollArea className="h-[400px]">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-1">
-                      {mockWatchlist.map((item) => (
-                        <div key={item.id} className="flex gap-3 p-2 border rounded-lg">
-                          <div className="w-16 h-24 relative overflow-hidden rounded">
-                            <img
-                              src={item.coverImage || "/placeholder.svg"}
-                              alt={item.title}
-                              className="object-cover w-full h-full"
-                            />
-                          </div>
-                          <div>
-                            <h3 className="font-medium line-clamp-1">{item.title}</h3>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              {item.type === "movie" && <Film className="h-3 w-3" />}
-                              {item.type === "book" && <BookOpen className="h-3 w-3" />}
-                              {item.type === "series" && <Tv className="h-3 w-3" />}
-                              <span className="capitalize">{item.type}</span>
-                              <span>•</span>
-                              <span>{item.year}</span>
+                    {isLoadingWatchlist ? (
+                      <div className="flex justify-center items-center h-full">
+                        <Loader2 className="h-8 w-8 animate-spin" />
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {watchlist
+                          .filter(item => selectedMediaType === 'all' || item.type === selectedMediaType)
+                          .map((item) => (
+                            <div 
+                              key={item.id} 
+                              className="flex gap-3 p-2 border rounded-lg hover:bg-accent cursor-pointer"
+                              onClick={() => router.push(`/media/${item.id}`)}
+                            >
+                              <div className="relative w-16 h-24">
+                                <Image
+                                  src={item.coverImage || "/placeholder.svg"}
+                                  alt={item.title}
+                                  fill
+                                  className="object-cover rounded"
+                                />
+                              </div>
+                              <div className="flex flex-col justify-between">
+                                <div>
+                                  <h3 className="font-medium line-clamp-1">{item.title}</h3>
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    {item.type === "movie" && <Film className="h-3 w-3" />}
+                                    {item.type === "book" && <BookOpen className="h-3 w-3" />}
+                                    {item.type === "tv" && <Tv className="h-3 w-3" />}
+                                    <span className="capitalize">{item.type}</span>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
-                            <div className="mt-2">
-                              <Button size="sm" variant="outline" className="h-7 text-xs">
-                                <ListChecks className="h-3 w-3 mr-1" />
-                                Mark as Watched
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                          ))}
+                      </div>
+                    )}
                   </ScrollArea>
                 </TabsContent>
               </Tabs>

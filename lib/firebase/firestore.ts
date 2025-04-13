@@ -365,4 +365,17 @@ export async function getUserMediaEntries(
     console.error('Error fetching user media entries:', error);
     throw error;
   }
+}
+
+export async function getUserWatchlist(userId: string): Promise<string[]> {
+  try {
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    if (!userDoc.exists()) {
+      return [];
+    }
+    return userDoc.data().watchlist || [];
+  } catch (error) {
+    console.error('Error fetching watchlist:', error);
+    return [];
+  }
 } 

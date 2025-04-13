@@ -73,6 +73,22 @@ export async function addMediaToLibrary(mediaData: {
   // Add the entry to the user's library
   const entryId = await addMediaEntry(user.uid, type, mediaData.mediaId, entry);
 
+  // Remove from watchlist if it exists there
+  try {
+    const token = await user.getIdToken();
+    await fetch(`/api/media/${mediaData.mediaId}/watchlist`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ add: false }),
+    });
+  } catch (error) {
+    console.error('Error removing from watchlist:', error);
+    // Don't throw error here as the main operation (adding to library) succeeded
+  }
+
   return entryId;
 }
 
