@@ -8,23 +8,27 @@ interface RatingProps {
   value: number
   onChange: (value: number) => void
   className?: string
+  readOnly?: boolean
 }
 
-export function Rating({ value, onChange, className }: RatingProps) {
+export function Rating({ value, onChange, className, readOnly = false }: RatingProps) {
   const [hoverValue, setHoverValue] = useState<number | null>(null)
   const [hoverPosition, setHoverPosition] = useState<number | null>(null)
 
   const handleMouseEnter = (index: number, position: number) => {
+    if (readOnly) return
     setHoverValue(index)
     setHoverPosition(position)
   }
 
   const handleMouseLeave = () => {
+    if (readOnly) return
     setHoverValue(null)
     setHoverPosition(null)
   }
 
   const handleClick = (index: number, position: number) => {
+    if (readOnly) return
     const rating = position < 0.5 ? index + 0.5 : index + 1
     onChange(rating)
   }
@@ -38,13 +42,13 @@ export function Rating({ value, onChange, className }: RatingProps) {
           key={index}
           type="button"
           className="relative"
-          onMouseMove={(e) => {
+          onMouseMove={readOnly ? undefined : (e) => {
             const rect = e.currentTarget.getBoundingClientRect()
             const position = (e.clientX - rect.left) / rect.width
             handleMouseEnter(index, position)
           }}
-          onMouseLeave={handleMouseLeave}
-          onClick={(e) => {
+          onMouseLeave={readOnly ? undefined : handleMouseLeave}
+          onClick={readOnly ? undefined : (e) => {
             const rect = e.currentTarget.getBoundingClientRect()
             const position = (e.clientX - rect.left) / rect.width
             handleClick(index, position)
@@ -52,7 +56,10 @@ export function Rating({ value, onChange, className }: RatingProps) {
         >
           {/* Background star (always gray) */}
           <Star
-            className="h-10 w-10 text-muted-foreground"
+            className={cn(
+              "h-10 w-10",
+              readOnly ? "text-muted-foreground" : "text-muted-foreground/50"
+            )}
           />
           
           {/* Full star overlay */}
