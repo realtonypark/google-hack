@@ -104,26 +104,41 @@ export async function GET(
     
     // Check if the ID has a prefix (e.g., movie-123)
     const hasPrefix = id.includes('-');
-    let type = 'media';
+    let type = 'movie'; // Default to movie if no type is specified
     let actualId = id;
     
     if (hasPrefix) {
       [type, actualId] = id.split('-');
     }
     
-    // Try to get from the media collection
+    // Try to get from the media collection using the actual ID
     const mediaRef = doc(db, 'media', actualId);
     const mediaDoc = await getDoc(mediaRef);
     
     if (mediaDoc.exists()) {
       const mediaData = mediaDoc.data();
+      // Use the type from the database if available, otherwise use the type from the ID
+      const mediaType = mediaData.type || type;
       return NextResponse.json({
         ...mediaData,
-        id: mediaDoc.id
+        id: actualId,
+        type: mediaType
       });
     }
+
+    // If not found in Firestore, try fetching from TMDB
+    const mediaItem = await fetchFromTMDB(type, actualId);
+    if (mediaItem) {
+      // Store the fetched item in Firestore for future use
+      await setDoc(doc(db, 'media', actualId), {
+        ...mediaItem,
+        type,
+        id: actualId
+      });
+      return NextResponse.json(mediaItem);
+    }
     
-    // If not found, return 404
+    // If not found anywhere, return 404
     return NextResponse.json(
       { error: 'Media not found' },
       { status: 404 }

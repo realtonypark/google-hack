@@ -8,6 +8,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { addToLibrary } from "@/lib/api"
 import { useToast } from "@/components/ui/use-toast"
+import { useRouter } from "next/navigation"
 
 interface MediaCardProps {
   media: {
@@ -24,30 +25,7 @@ interface MediaCardProps {
 }
 
 export default function MediaCard({ media }: MediaCardProps) {
-  const [isAdded, setIsAdded] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const { toast } = useToast()
-
-  const handleAddToLibrary = async () => {
-    setIsLoading(true)
-    try {
-      await addToLibrary(media.id)
-      setIsAdded(true)
-      toast({
-        title: "Added to library",
-        description: `${media.title} has been added to your library.`,
-      })
-    } catch (error) {
-      console.error("Failed to add to library:", error)
-      toast({
-        title: "Failed to add",
-        description: "There was an error adding this to your library.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const router = useRouter()
 
   const getMediaIcon = () => {
     switch (media.type) {
@@ -63,7 +41,10 @@ export default function MediaCard({ media }: MediaCardProps) {
   }
 
   return (
-    <Card className="w-[250px] overflow-hidden">
+    <Card 
+      className="w-[250px] overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+      onClick={() => router.push(`/media/${media.id}`)}
+    >
       <div className="relative aspect-[2/3] w-full overflow-hidden">
         <Image
           src={media.coverImage || "/placeholder.svg"}
@@ -89,39 +70,18 @@ export default function MediaCard({ media }: MediaCardProps) {
           </div>
           <h3 className="font-semibold leading-tight">{media.title}</h3>
           <div className="flex flex-wrap gap-1">
-          {Array.isArray(media.genres) &&
-      media.genres.slice(0, 2).map((genre) => (
-    <Badge key={genre} variant="outline" className="text-xs">
-      {genre}
-    </Badge>
-  ))}
+            {Array.isArray(media.genres) &&
+              media.genres.slice(0, 2).map((genre) => (
+                <Badge key={genre} variant="outline" className="text-xs">
+                  {genre}
+                </Badge>
+              ))}
           </div>
           {media.recommendedBy && (
             <p className="text-xs text-muted-foreground pt-1">Recommended by {media.recommendedBy}</p>
           )}
         </div>
       </CardContent>
-      <CardFooter className="p-4 pt-0">
-        <Button
-          variant={isAdded ? "secondary" : "default"}
-          size="sm"
-          className="w-full"
-          onClick={handleAddToLibrary}
-          disabled={isLoading || isAdded}
-        >
-          {isAdded ? (
-            <>
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Added
-            </>
-          ) : (
-            <>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add to Library
-            </>
-          )}
-        </Button>
-      </CardFooter>
     </Card>
   )
 }

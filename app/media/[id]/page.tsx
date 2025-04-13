@@ -60,7 +60,9 @@ export default function MediaDetailPage() {
           const userDoc = await getDoc(doc(db, 'users', user.uid))
           if (userDoc.exists()) {
             const watchlist = userDoc.data().watchlist || []
-            setInWatchlist(watchlist.includes(id))
+            // Use the full media ID with type prefix for checking
+            const fullMediaId = `${data.type}-${id}`
+            setInWatchlist(watchlist.includes(fullMediaId))
           }
         }
       } catch (error) {
@@ -119,7 +121,18 @@ export default function MediaDetailPage() {
         return;
       }
 
+      if (!media) {
+        toast({
+          title: "Error",
+          description: "Media details not loaded",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const token = await user.getIdToken();
+      // Use the full media ID with type prefix
+      const fullMediaId = `${media.type}-${id}`;
       const response = await fetch(`/api/media/${id}/watchlist`, {
         method: 'POST',
         headers: {
@@ -136,7 +149,7 @@ export default function MediaDetailPage() {
       setInWatchlist(!inWatchlist)
       toast({
         title: inWatchlist ? "Removed from watchlist" : "Added to watchlist",
-        description: `${media?.title} has been ${inWatchlist ? 'removed from' : 'added to'} your watchlist`,
+        description: `${media.title} has been ${inWatchlist ? 'removed from' : 'added to'} your watchlist`,
       })
     } catch (error) {
       console.error('Error updating watchlist:', error)

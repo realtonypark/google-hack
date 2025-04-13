@@ -9,7 +9,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const { add } = await request.json();
     
     // Get the auth token from the Authorization header
@@ -25,6 +25,21 @@ export async function POST(
     const decodedToken = await getAuth().verifyIdToken(token);
     const userId = decodedToken.uid;
 
+    // Get the media type from Firestore
+    const mediaRef = doc(db, 'media', id);
+    const mediaDoc = await getDoc(mediaRef);
+    
+    if (!mediaDoc.exists()) {
+      return NextResponse.json(
+        { error: 'Media not found' },
+        { status: 404 }
+      );
+    }
+
+    const mediaData = mediaDoc.data();
+    const mediaType = mediaData.type || 'movie';
+    const fullMediaId = `${mediaType}-${id}`;
+
     // Get the user's document
     const userRef = doc(db, 'users', userId);
     const userDoc = await getDoc(userRef);
@@ -32,13 +47,13 @@ export async function POST(
     if (!userDoc.exists()) {
       // Create user document if it doesn't exist
       await setDoc(userRef, {
-        watchlist: add ? [id] : [],
+        watchlist: add ? [fullMediaId] : [],
         updatedAt: new Date()
       });
     } else {
-      // Update watchlist
+      // Update watchlist with the full media ID
       await updateDoc(userRef, {
-        watchlist: add ? arrayUnion(id) : arrayRemove(id),
+        watchlist: add ? arrayUnion(fullMediaId) : arrayRemove(fullMediaId),
         updatedAt: new Date()
       });
     }
