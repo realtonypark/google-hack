@@ -1,38 +1,49 @@
+/* Update this in your globals.css file */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
+    /* Base Colors */
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
 
+    /* Enhanced primary and accent colors */
+    --primary: 246 80% 60%;
+    --primary-foreground: 210 40% 98%;
+ 
+    --secondary: 262 80% 60%;
+    --secondary-foreground: 210 40% 98%;
+ 
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+ 
+    --accent: 330 75% 65%;
+    --accent-foreground: 210 40% 98%;
+ 
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Surface colors */
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
  
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
- 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
- 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
- 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
- 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
- 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --ring: 246 80% 60%;
  
-    --radius: 0.5rem;
+    --radius: 0.75rem;
+    
+    /* Chart colors */
+    --chart-1: 246 80% 60%;  /* indigo */
+    --chart-2: 262 80% 60%;  /* violet */
+    --chart-3: 276 80% 60%;  /* purple */
+    --chart-4: 330 75% 65%;  /* pink */
+    --chart-5: 35 90% 61%;   /* amber */
   }
  
   .dark {
@@ -45,16 +56,17 @@
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
  
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    /* Enhanced vibrant primary & accent colors for dark mode */
+    --primary: 246 70% 65%;
+    --primary-foreground: 210 40% 98%;
  
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 262 70% 65%;
     --secondary-foreground: 210 40% 98%;
  
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
  
-    --accent: 217.2 32.6% 17.5%;
+    --accent: 330 65% 65%;
     --accent-foreground: 210 40% 98%;
  
     --destructive: 0 62.8% 30.6%;
@@ -63,6 +75,13 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+    
+    /* Chart colors for dark mode */
+    --chart-1: 246 70% 65%;
+    --chart-2: 262 70% 65%;
+    --chart-3: 276 65% 65%;
+    --chart-4: 330 65% 65%;
+    --chart-5: 35 70% 61%;
   }
 }
  
@@ -72,5 +91,60 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Premium utility classes */
+@layer components {
+  /* Gradient text elements */
+  .gradient-text {
+    @apply bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-transparent bg-clip-text;
+  }
+  
+  /* Subtle gradient backgrounds */
+  .gradient-bg-subtle {
+    @apply bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5;
+  }
+  
+  /* Premium card styling */
+  .card-premium {
+    @apply border-0 rounded-xl shadow-[0_8px_20px_-8px_rgba(0,0,0,0.12)] transition-all duration-300;
+  }
+  
+  /* Interactive card hover effects */
+  .card-interactive {
+    @apply hover:shadow-[0_16px_32px_-12px_rgba(0,0,0,0.15)] hover:-translate-y-[2px];
+  }
+  
+  /* Media card container */
+  .media-card {
+    @apply border-0 rounded-xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.15)] 
+           hover:shadow-[0_16px_32px_-8px_rgba(0,0,0,0.25)] hover:-translate-y-[3px]
+           transition-all duration-300;
+  }
+  
+  /* Progress bars */
+  .progress-bar {
+    @apply h-2.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden relative;
+  }
+  
+  .progress-fill {
+    @apply absolute top-0 h-full rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500;
+  }
+  
+  /* Premium badges */
+  .badge-premium {
+    @apply bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 
+           hover:bg-indigo-100 dark:hover:bg-indigo-900/50 backdrop-blur-sm 
+           border border-indigo-200/50 dark:border-indigo-800/50 
+           px-2.5 py-0.5 rounded-full font-medium;
+  }
+  
+  /* Status badges (trending, etc) */
+  .badge-status {
+    @apply px-2.5 py-1 rounded-full text-xs font-semibold
+           bg-gradient-to-r from-purple-500 to-pink-500 text-white
+           border border-white/20 shadow-lg
+           flex items-center gap-1;
   }
 }

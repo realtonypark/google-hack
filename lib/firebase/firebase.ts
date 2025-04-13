@@ -3,6 +3,7 @@ import { getFirestore, doc, setDoc } from 'firebase/firestore'
 import { getAuth, GoogleAuthProvider, signInWithPopup, User } from 'firebase/auth'
 import { getStorage } from 'firebase/storage'
 import { signOut as firebaseSignOut } from 'firebase/auth'
+import { removeUndefinedFields } from "@/lib/utils"
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -49,14 +50,14 @@ const createSession = async (idToken: string) => {
 export const saveUserToFirestore = async (user: User) => {
   if (!user.uid) return
 
-  const userData = {
+  const userData = removeUndefinedFields({
     uid: user.uid,
     email: user.email || null,
     displayName: user.displayName || user.email?.split('@')[0] || 'User',
     photoURL: user.photoURL || null,
     createdAt: new Date(),
     isAuthenticated: true,
-  }
+  })
 
   const userRef = doc(db, 'users', user.uid)
   await setDoc(userRef, userData, { merge: true })

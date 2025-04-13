@@ -25,7 +25,7 @@ import { Timestamp } from 'firebase/firestore'
 import { updateFavoriteMedia } from "@/lib/firebase/firestore"
 import { useRouter } from "next/navigation"
 import { generateTasteSummary } from "@/lib/gemini/taste-summary"
-
+import ChatbotLauncher from "@/components/ChatbotLauncher"
 
 interface ProfileViewProps {
   profile: any
@@ -477,35 +477,35 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
           {hasEntries && (
             <div className="absolute inset-0 grid grid-cols-2 gap-0.5">
               {entries.slice(0, 2).map((entry, index) => (
-                <div key={`${entry.id}-${index}`} className="relative aspect-[2/3] rounded overflow-hidden">
+                <div key={`${entry.id}-${index}`} className="relative aspect-[2/3] rounded-lg overflow-hidden shadow-sm">
                   <img
                     src={entry.coverImage || "/placeholder.svg"}
                     alt={entry.title}
                     className="object-cover w-full h-full"
                   />
                   {entry.rating > 0 && (
-                    <div className="absolute bottom-0 left-0 right-0 bg-background/80 px-1 text-xs text-center">
+                    <div className="absolute bottom-0 left-0 right-0 bg-background/80 backdrop-blur-sm px-1 text-xs text-center font-medium">
                       ★ {entry.rating}
                     </div>
                   )}
                 </div>
               ))}
               {entries.length > 2 && (
-                <div className="absolute bottom-0 right-0 bg-background/80 px-1 rounded text-xs">
+                <div className="absolute bottom-0 right-0 bg-background/80 backdrop-blur-sm px-1 rounded-tl-lg text-xs font-medium">
                   +{entries.length - 2}
                 </div>
               )}
             </div>
           )}
-          <div className={`absolute top-1 left-1 text-xs ${hasEntries ? 'text-background' : ''}`}>
+          <div className={`absolute top-1 left-1 text-xs ${hasEntries ? 'text-background font-medium' : ''}`}>
             {date.getDate()}
           </div>
         </div>
 
         {/* Tooltip for showing all entries */}
         {hoveredDate?.toDateString() === date.toDateString() && entries.length > 0 && (
-          <div className="absolute z-50 w-64 p-2 bg-background border rounded-lg shadow-lg">
-            <div className="text-sm font-medium mb-1">
+          <div className="absolute z-50 w-64 p-3 bg-background/95 backdrop-blur-sm border border-border/50 rounded-xl shadow-xl">
+            <div className="text-sm font-medium mb-2 border-b pb-1">
               {format(date, 'MMMM d, yyyy')}
             </div>
             <div className="space-y-2">
@@ -515,13 +515,17 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                     <img
                       src={entry.coverImage || "/placeholder.svg"}
                       alt={entry.title}
-                      className="object-cover w-full h-full rounded"
+                      className="object-cover w-full h-full rounded-lg shadow-sm"
                     />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{entry.title}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {entry.type} • {entry.rating ? `★ ${entry.rating}` : 'No rating'}
+                    <div className="text-xs text-muted-foreground flex items-center gap-1">
+                      {entry.type === "movie" && <Film className="h-3 w-3" />}
+                      {entry.type === "book" && <BookOpen className="h-3 w-3" />}
+                      {entry.type === "tv" && <Tv className="h-3 w-3" />}
+                      <span className="capitalize">{entry.type}</span>
+                      {entry.rating ? <span>• ★ {entry.rating}</span> : ''}
                     </div>
                   </div>
                 </div>
@@ -534,29 +538,66 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
   };
 
   return (
-    <div className="container py-10">
+    <div className="container py-10 max-w-6xl mx-auto">
+      {/* Enhanced header with gradient background */}
+      <div className="relative mb-6">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-indigo-500/10 to-transparent rounded-full -z-10 blur-2xl"></div>
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-purple-500/10 to-transparent rounded-full -z-10 blur-2xl"></div>
+      </div>
+
       <div className="grid gap-8 md:grid-cols-3">
         <div className="md:col-span-1">
-          <Card>
+          <Card className="border-0 rounded-xl shadow-[0_8px_20px_-8px_rgba(0,0,0,0.12)]">
             <CardHeader className="flex flex-col items-center text-center">
               <div className="relative w-32 h-32">
-                <Avatar className="w-32 h-32">
+                <Avatar className="w-32 h-32 border-4 border-background shadow-xl">
                   <AvatarImage src={profileImage} />
-                  <AvatarFallback>{profile.name?.charAt(0) || "U"}</AvatarFallback>
+                  <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-3xl font-semibold">
+                    {profile.name?.charAt(0) || "U"}
+                  </AvatarFallback>
                 </Avatar>
+                {isOwnProfile && (
+                  <div 
+                    className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-1 cursor-pointer shadow-md hover:bg-primary/90 transition-colors"
+                    onClick={handleProfileImageClick}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-4 w-4"
+                    >
+                      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                      <path d="m15 5 4 4" />
+                    </svg>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleProfileImageChange}
+                    />
+                  </div>
+                )}
               </div>
-              <CardTitle className="mt-4">{profile.name}</CardTitle>
-              <CardDescription>@{profile.username}</CardDescription>
+              <CardTitle className="mt-4 text-2xl font-bold">{profile.name}</CardTitle>
+              <CardDescription className="text-base">@{profile.username}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div>
-                  <h3 className="text-sm font-medium mb-2">Favorite Media</h3>
-                  <div className="grid grid-cols-3 gap-2">
+                  <h3 className="text-base font-medium mb-3 border-b pb-1">Favorite Media</h3>
+                  <div className="grid grid-cols-3 gap-4">
                     {(['book', 'movie', 'tv'] as const).map((type) => (
                       <div key={type} className="text-center">
                         <div 
-                          className={`relative w-full aspect-[2/3] rounded-md overflow-hidden mb-1 ${isOwnProfile ? 'cursor-pointer hover:opacity-80 transition-opacity group' : ''} ${!profile.favoriteMedia?.[type] ? 'bg-muted' : ''}`}
+                          className={`relative w-full aspect-[2/3] rounded-xl overflow-hidden mb-2 shadow-md 
+                                      ${isOwnProfile ? 'cursor-pointer hover:opacity-90 transition-all duration-300 group' : ''} 
+                                      ${!profile.favoriteMedia?.[type] ? 'bg-muted' : ''}`}
                           onClick={() => isOwnProfile && handleEditMedia(type === 'tv' ? 'series' : type)}
                         >
                           {profile.favoriteMedia?.[type] && (
@@ -565,13 +606,19 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                                 src={profile.favoriteMedia[type].coverImage}
                                 alt={profile.favoriteMedia[type].title}
                                 fill
-                                className="object-cover"
+                                className="object-cover transition-transform duration-500 group-hover:scale-105"
                               />
+                              {/* Cinematic overlay on hover */}
+                              {isOwnProfile && (
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent 
+                                               opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                              )}
                               {isOwnProfile && (
                                 <Button 
                                   size="icon" 
                                   variant="outline" 
-                                  className="absolute bottom-1 right-1 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-background"
+                                  className="absolute bottom-2 right-2 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 
+                                           transition-opacity bg-background/80 backdrop-blur-sm border-white/20"
                                 >
                                   <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -581,7 +628,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                                     strokeWidth="2"
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
-                                    className="h-3 w-3"
+                                    className="h-4 w-4"
                                   >
                                     <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
                                     <path d="m15 5 4 4" />
@@ -591,7 +638,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                             </>
                           )}
                           {isOwnProfile && !profile.favoriteMedia?.[type] && (
-                            <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 viewBox="0 0 24 24"
@@ -600,7 +647,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                                 strokeWidth="2"
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
-                                className="h-6 w-6 text-muted-foreground"
+                                className="h-8 w-8 text-muted-foreground"
                               >
                                 <path d="M12 5v14M5 12h14" />
                               </svg>
@@ -608,11 +655,17 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                           )}
                         </div>
                         <div className="flex justify-center">
-                          <Badge variant="outline" className="text-xs">
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs px-2 py-1 rounded-full
+                                      ${type === 'movie' ? 'bg-indigo-50 text-indigo-700 border-indigo-200/50 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800/50' : 
+                                      type === 'book' ? 'bg-pink-50 text-pink-700 border-pink-200/50 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-800/50' : 
+                                      'bg-purple-50 text-purple-700 border-purple-200/50 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800/50'}`}
+                          >
                             {type === 'movie' && <Film className="h-3 w-3 mr-1" />}
                             {type === 'book' && <BookOpen className="h-3 w-3 mr-1" />}
                             {type === 'tv' && <Tv className="h-3 w-3 mr-1" />}
-                            <span>{type === 'tv' ? 'Series' : type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                            <span className="font-medium">{type === 'tv' ? 'Series' : type.charAt(0).toUpperCase() + type.slice(1)}</span>
                           </Badge>
                         </div>
                       </div>
@@ -621,20 +674,20 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-medium mb-2">Rating Distribution</h3>
+                  <h3 className="text-base font-medium mb-3 border-b pb-1">Rating Distribution</h3>
                   <div className="space-y-4">
                     <div className="grid grid-cols-3 gap-4">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold">{ratingData.averageRating.toFixed(1)}</div>
-                        <div className="text-xs text-muted-foreground">Average Rating</div>
+                      <div className="text-center p-3 bg-primary/5 rounded-lg border border-primary/10">
+                        <div className="text-2xl font-bold text-primary">{ratingData.averageRating.toFixed(1)}</div>
+                        <div className="text-xs text-muted-foreground mt-1">Average</div>
                       </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold">{ratingData.numberOfRatings}</div>
-                        <div className="text-xs text-muted-foreground">Number of Ratings</div>
+                      <div className="text-center p-3 bg-purple-500/5 rounded-lg border border-purple-500/10">
+                        <div className="text-2xl font-bold text-purple-500">{ratingData.numberOfRatings}</div>
+                        <div className="text-xs text-muted-foreground mt-1">Total</div>
                       </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold">{ratingData.mostFrequent}</div>
-                        <div className="text-xs text-muted-foreground">Most frequent</div>
+                      <div className="text-center p-3 bg-pink-500/5 rounded-lg border border-pink-500/10">
+                        <div className="text-2xl font-bold text-pink-500">{ratingData.mostFrequent}</div>
+                        <div className="text-xs text-muted-foreground mt-1">Most given</div>
                       </div>
                     </div>
                     <div className="px-2">
@@ -653,35 +706,41 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
         </div>
 
         <div className="md:col-span-2 space-y-8">
-          <Card>
-            <CardHeader>
+          <Card className="border-0 rounded-xl shadow-[0_8px_20px_-8px_rgba(0,0,0,0.12)] overflow-hidden">
+            <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Taste Report</CardTitle>
-                  <CardDescription>AI-generated analysis of your media preferences</CardDescription>
+                  <CardTitle className="text-2xl font-bold tracking-tight">Taste Report</CardTitle>
+                  <CardDescription className="text-base">AI-generated analysis of your media preferences</CardDescription>
                 </div>
                 <Link href={`/profile/${profile.id}/ai-report`}>
-                  <Button variant="default" className="bg-pink-500 hover:bg-pink-600 text-white">
+                  <Button 
+                    variant="default" 
+                    className="bg-gradient-to-r from-indigo-500 to-pink-500 hover:from-indigo-600 hover:to-pink-600 
+                              text-white border-0 shadow-md transition-all"
+                  >
                     See full AI report
                     <ChevronRight className="ml-1 h-4 w-4" />
                   </Button>
                 </Link>
               </div>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm">{tasteData?.description}</p>
+            <CardContent className="relative">
+              {/* Decorative accent */}
+              <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-indigo-500 via-purple-500 to-pink-500 rounded-r-full"></div>
+              <p className="text-base leading-relaxed pl-4 text-foreground/80">{tasteData?.description || "Loading taste data..."}</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-0 rounded-xl shadow-[0_8px_20px_-8px_rgba(0,0,0,0.12)]">
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
-              <CardTitle>Calendar</CardTitle>
+              <CardTitle className="text-xl font-semibold tracking-tight">Media Calendar</CardTitle>
               <div className="flex items-center gap-2">
                 <Select 
                   value={selectedMediaType} 
                   onValueChange={(value) => setSelectedMediaType(value as MediaType | 'all')}
                 >
-                  <SelectTrigger className="w-[100px] h-8">
+                  <SelectTrigger className="w-[120px] h-9 border border-border/50 rounded-lg">
                     <SelectValue placeholder="Filter" />
                   </SelectTrigger>
                   <SelectContent>
@@ -694,39 +753,36 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
                   <button 
-                    className="p-2 hover:bg-accent rounded-md"
+                    className="p-2 hover:bg-accent rounded-lg transition-colors"
                     onClick={() => navigateMonth('prev')}
                   >
-                    <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+                    <ChevronLeft className="h-5 w-5 text-muted-foreground" />
                   </button>
-                  <span className="text-xl font-semibold">{formatYearMonth(currentMonth)}</span>
+                  <span className="text-xl font-semibold tracking-tight">{formatYearMonth(currentMonth)}</span>
                   <button 
-                    className="p-2 hover:bg-accent rounded-md"
+                    className="p-2 hover:bg-accent rounded-lg transition-colors"
                     onClick={() => navigateMonth('next')}
                   >
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
                   </button>
                 </div>
                 <Button 
                   variant="outline" 
                   size="sm"
+                  className="border border-border/50 shadow-sm hover:bg-accent hover:text-accent-foreground"
                   onClick={goToToday}
                 >
                   Today
                 </Button>
               </div>
 
-              <div className="grid grid-cols-7 gap-6 text-center mb-4">
-                <div className="text-sm text-muted-foreground">Sun</div>
-                <div className="text-sm text-muted-foreground">Mon</div>
-                <div className="text-sm text-muted-foreground">Tue</div>
-                <div className="text-sm text-muted-foreground">Wed</div>
-                <div className="text-sm text-muted-foreground">Thu</div>
-                <div className="text-sm text-muted-foreground">Fri</div>
-                <div className="text-sm text-muted-foreground">Sat</div>
+              <div className="grid grid-cols-7 gap-1 text-center mb-4">
+                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                  <div key={day} className="text-sm font-medium text-muted-foreground">{day}</div>
+                ))}
               </div>
 
               <div className="grid grid-cols-7 gap-1 text-sm">
@@ -741,9 +797,9 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                   
                   return isCurrentMonth ? renderCalendarCell(currentDate) : (
                     <div key={i} className="aspect-square p-1">
-                      <div className="relative w-full h-full">
+                      <div className="relative w-full h-full opacity-30">
                         <div className="absolute top-1 left-1 text-xs text-muted-foreground">
-                          {day}
+                          {day > 0 ? day : day + new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 0).getDate()}
                         </div>
                       </div>
                     </div>
@@ -753,32 +809,39 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-0 rounded-xl shadow-[0_8px_20px_-8px_rgba(0,0,0,0.12)]">
             <CardHeader className="pb-3">
-              <Tabs defaultValue="library">
-                <div className="flex items-center justify-between">
-                  <CardTitle>Media Collection</CardTitle>
-                </div>
-                <CardDescription>Your personal media collection</CardDescription>
-              </Tabs>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl font-semibold tracking-tight">Media Collection</CardTitle>
+              </div>
+              <CardDescription className="text-muted-foreground">Your personal media collection</CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="library">
-                <TabsList>
-                  <TabsTrigger value="library" onClick={() => setActiveTab('library')}>
+              <Tabs defaultValue="library" className="w-full">
+                <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 p-1 rounded-full bg-muted/50 border border-border/50">
+                  <TabsTrigger 
+                    value="library" 
+                    onClick={() => setActiveTab('library')}
+                    className="rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground py-2"
+                  >
                     Library
                   </TabsTrigger>
-                  <TabsTrigger value="watchlist" onClick={() => setActiveTab('watchlist')}>
+                  <TabsTrigger 
+                    value="watchlist" 
+                    onClick={() => setActiveTab('watchlist')}
+                    className="rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground py-2"
+                  >
                     Watchlist
                   </TabsTrigger>
                 </TabsList>
-                <TabsContent value="library" className="space-y-4">
+                
+                <TabsContent value="library" className="space-y-4 pt-4">
                   <div className="flex justify-between items-center">
                     <Select
                       value={selectedMediaType}
                       onValueChange={(value) => setSelectedMediaType(value as MediaType | 'all')}
                     >
-                      <SelectTrigger className="w-[180px]">
+                      <SelectTrigger className="w-[180px] border border-border/50 rounded-lg">
                         <SelectValue placeholder="Filter by type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -790,47 +853,54 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                     </Select>
                   </div>
 
-                  <ScrollArea className="h-[400px]">
+                  <ScrollArea className="h-[400px] pr-4">
                     {activeTab === 'library' ? (
                       isLoadingLibrary ? (
                         <div className="flex justify-center items-center h-full">
-                          <Loader2 className="h-8 w-8 animate-spin" />
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                      ) : libraryEntries.filter(entry => selectedMediaType === 'all' || entry.type === selectedMediaType).length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-64 text-center">
+                          <div className="text-4xl mb-4">📚</div>
+                          <p className="text-lg font-medium mb-2">No media added yet</p>
+                          <p className="text-muted-foreground max-w-xs">Start adding movies, books, or TV shows to build your collection</p>
                         </div>
                       ) : (
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           {libraryEntries
                             .filter(entry => selectedMediaType === 'all' || entry.type === selectedMediaType)
                             .map((item) => (
                               <div 
                                 key={item.id} 
-                                className="flex gap-3 p-2 border rounded-lg hover:bg-accent cursor-pointer"
+                                className="flex gap-3 p-3 border border-border/50 rounded-xl hover:shadow-md hover:-translate-y-0.5 
+                                          transition-all duration-300 cursor-pointer bg-card"
                                 onClick={() => router.push(`/media/${item.mediaId}`)}
                               >
-                                <div className="relative w-16 h-24">
+                                <div className="relative w-16 h-24 rounded-lg overflow-hidden shadow-sm">
                                   <Image
                                     src={item.coverImage || "/placeholder.svg"}
                                     alt={item.title}
                                     fill
-                                    className="object-cover rounded"
+                                    className="object-cover transition-transform duration-500 hover:scale-105"
                                   />
                                 </div>
-                                <div className="flex flex-col justify-between">
+                                <div className="flex flex-col justify-between flex-1">
                                   <div>
                                     <h3 className="font-medium line-clamp-1">{item.title}</h3>
-                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                      {item.type === "movie" && <Film className="h-3 w-3" />}
-                                      {item.type === "book" && <BookOpen className="h-3 w-3" />}
-                                      {item.type === "tv" && <Tv className="h-3 w-3" />}
+                                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                      {item.type === "movie" && <Film className="h-3 w-3 text-indigo-500" />}
+                                      {item.type === "book" && <BookOpen className="h-3 w-3 text-pink-500" />}
+                                      {item.type === "tv" && <Tv className="h-3 w-3 text-purple-500" />}
                                       <span className="capitalize">{item.type}</span>
                                       {item.rating > 0 && (
                                         <>
                                           <span>•</span>
-                                          <span>★ {item.rating}</span>
+                                          <span className="text-amber-500 font-medium">★ {item.rating}</span>
                                         </>
                                       )}
                                     </div>
                                   </div>
-                                  <div className="flex items-center text-xs text-muted-foreground">
+                                  <div className="flex items-center text-xs text-muted-foreground mt-2">
                                     <CalendarIcon className="h-3 w-3 mr-1" />
                                     Added: {formatDate(item.watchedAt)}
                                   </div>
@@ -842,35 +912,45 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                     ) : (
                       isLoadingWatchlist ? (
                         <div className="flex justify-center items-center h-full">
-                          <Loader2 className="h-8 w-8 animate-spin" />
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                      ) : watchlist.filter(item => selectedMediaType === 'all' || item.type === selectedMediaType).length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-64 text-center">
+                          <div className="text-4xl mb-4">📋</div>
+                          <p className="text-lg font-medium mb-2">Your watchlist is empty</p>
+                          <p className="text-muted-foreground max-w-xs">Start adding media to your watchlist to track what you want to experience next</p>
                         </div>
                       ) : (
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           {watchlist
                             .filter(item => selectedMediaType === 'all' || item.type === selectedMediaType)
                             .map((item) => (
                               <div 
                                 key={`${item.type}-${item.id}`} 
-                                className="flex gap-3 p-2 border rounded-lg hover:bg-accent cursor-pointer"
+                                className="flex gap-3 p-3 border border-border/50 rounded-xl hover:shadow-md hover:-translate-y-0.5 
+                                         transition-all duration-300 cursor-pointer bg-card"
                                 onClick={() => router.push(`/media/${item.id}`)}
                               >
-                                <div className="relative w-16 h-24">
+                                <div className="relative w-16 h-24 rounded-lg overflow-hidden shadow-sm">
                                   <Image
                                     src={item.coverImage || "/placeholder.svg"}
                                     alt={item.title}
                                     fill
-                                    className="object-cover rounded"
+                                    className="object-cover transition-transform duration-500 hover:scale-105"
                                   />
                                 </div>
-                                <div className="flex flex-col justify-between">
+                                <div className="flex flex-col justify-between flex-1">
                                   <div>
                                     <h3 className="font-medium line-clamp-1">{item.title}</h3>
-                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                      {item.type === "movie" && <Film className="h-3 w-3" />}
-                                      {item.type === "book" && <BookOpen className="h-3 w-3" />}
-                                      {item.type === "tv" && <Tv className="h-3 w-3" />}
+                                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                      {item.type === "movie" && <Film className="h-3 w-3 text-indigo-500" />}
+                                      {item.type === "book" && <BookOpen className="h-3 w-3 text-pink-500" />}
+                                      {item.type === "tv" && <Tv className="h-3 w-3 text-purple-500" />}
                                       <span className="capitalize">{item.type}</span>
                                     </div>
+                                  </div>
+                                  <div className="flex items-center text-xs text-muted-foreground mt-2 italic">
+                                    On your watchlist
                                   </div>
                                 </div>
                               </div>
@@ -880,13 +960,14 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                     )}
                   </ScrollArea>
                 </TabsContent>
-                <TabsContent value="watchlist" className="space-y-4">
+                
+                <TabsContent value="watchlist" className="space-y-4 pt-4">
                   <div className="flex justify-between items-center">
                     <Select
                       value={selectedMediaType}
                       onValueChange={(value) => setSelectedMediaType(value as MediaType | 'all')}
                     >
-                      <SelectTrigger className="w-[180px]">
+                      <SelectTrigger className="w-[180px] border border-border/50 rounded-lg">
                         <SelectValue placeholder="Filter by type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -898,38 +979,48 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                     </Select>
                   </div>
 
-                  <ScrollArea className="h-[400px]">
+                  <ScrollArea className="h-[400px] pr-4">
                     {isLoadingWatchlist ? (
                       <div className="flex justify-center items-center h-full">
-                        <Loader2 className="h-8 w-8 animate-spin" />
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      </div>
+                    ) : watchlist.filter(item => selectedMediaType === 'all' || item.type === selectedMediaType).length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-64 text-center">
+                        <div className="text-4xl mb-4">📋</div>
+                        <p className="text-lg font-medium mb-2">Your watchlist is empty</p>
+                        <p className="text-muted-foreground max-w-xs">Start adding media to your watchlist to track what you want to experience next</p>
                       </div>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {watchlist
                           .filter(item => selectedMediaType === 'all' || item.type === selectedMediaType)
                           .map((item) => (
                             <div 
                               key={`${item.type}-${item.id}`} 
-                              className="flex gap-3 p-2 border rounded-lg hover:bg-accent cursor-pointer"
+                              className="flex gap-3 p-3 border border-border/50 rounded-xl hover:shadow-md hover:-translate-y-0.5 
+                                       transition-all duration-300 cursor-pointer bg-card"
                               onClick={() => router.push(`/media/${item.id}`)}
                             >
-                              <div className="relative w-16 h-24">
+                              <div className="relative w-16 h-24 rounded-lg overflow-hidden shadow-sm">
                                 <Image
                                   src={item.coverImage || "/placeholder.svg"}
                                   alt={item.title}
                                   fill
-                                  className="object-cover rounded"
+                                  className="object-cover transition-transform duration-500 hover:scale-105"
                                 />
                               </div>
-                              <div className="flex flex-col justify-between">
+                              <div className="flex flex-col justify-between flex-1">
                                 <div>
                                   <h3 className="font-medium line-clamp-1">{item.title}</h3>
-                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                    {item.type === "movie" && <Film className="h-3 w-3" />}
-                                    {item.type === "book" && <BookOpen className="h-3 w-3" />}
-                                    {item.type === "tv" && <Tv className="h-3 w-3" />}
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                    {item.type === "movie" && <Film className="h-3 w-3 text-indigo-500" />}
+                                    {item.type === "book" && <BookOpen className="h-3 w-3 text-pink-500" />}
+                                    {item.type === "tv" && <Tv className="h-3 w-3 text-purple-500" />}
                                     <span className="capitalize">{item.type}</span>
                                   </div>
+                                </div>
+                                <div className="flex items-center text-xs text-muted-foreground mt-2 italic">
+                                  On your watchlist
                                 </div>
                               </div>
                             </div>
@@ -950,44 +1041,47 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
         setSearchQuery("");
         setSearchResults([]);
       }}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] border-0 rounded-xl shadow-xl">
           <DialogHeader>
-            <DialogTitle>Edit Favorite {editingMedia.type?.charAt(0).toUpperCase()}{editingMedia.type?.slice(1)}</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">
+              Edit Favorite {editingMedia.type?.charAt(0).toUpperCase()}{editingMedia.type?.slice(1)}
+            </DialogTitle>
             <DialogDescription>
               Search and select your favorite {editingMedia.type} from our database.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input 
                 placeholder={`Search for a ${editingMedia.type}...`}
-                className="pl-8"
+                className="pl-10 py-6 rounded-lg border border-border/50"
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
               />
               {isSearching && (
-                <div className="absolute right-2.5 top-2.5">
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                <div className="absolute right-3 top-3">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
                 </div>
               )}
             </div>
 
-            <div className="relative min-h-[200px]">
+            <div className="relative min-h-[250px]">
               {isSearching ? (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : searchResults.length > 0 ? (
-                <ScrollArea className="h-[200px]">
-                  <div className="space-y-2">
+                <ScrollArea className="h-[250px] pr-4">
+                  <div className="space-y-3">
                     {searchResults.map((result) => (
                       <div
                         key={result.id}
-                        className="flex items-center gap-3 p-2 rounded-lg border cursor-pointer hover:bg-accent"
+                        className="flex items-center gap-3 p-3 rounded-xl border border-border/50 cursor-pointer 
+                                  hover:bg-accent hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
                         onClick={() => handleSelectMedia(result)}
                       >
-                        <div className="w-12 h-16 relative rounded overflow-hidden">
+                        <div className="w-12 h-18 relative rounded-lg overflow-hidden shadow-sm">
                           <Image
                             src={result.coverImage || "/placeholder.svg"}
                             alt={result.title}
@@ -996,9 +1090,18 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                           />
                         </div>
                         <div>
-                          <h4 className="font-medium text-sm">{result.title}</h4>
-                          <p className="text-xs text-muted-foreground">
-                            {result.type} • {result.releaseDate ? new Date(result.releaseDate).getFullYear() : 'N/A'}
+                          <h4 className="font-medium text-base">{result.title}</h4>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                            {result.type === "movie" && <Film className="h-3 w-3 text-indigo-500" />}
+                            {result.type === "book" && <BookOpen className="h-3 w-3 text-pink-500" />}
+                            {result.type === "tv" && <Tv className="h-3 w-3 text-purple-500" />}
+                            <span className="capitalize">{result.type}</span>
+                            {result.releaseDate && (
+                              <>
+                                <span>•</span>
+                                <span>{new Date(result.releaseDate).getFullYear()}</span>
+                              </>
+                            )}
                           </p>
                         </div>
                       </div>
@@ -1006,16 +1109,21 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                   </div>
                 </ScrollArea>
               ) : searchQuery.length > 0 && (
-                <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
-                  {searchQuery.length <= 2 ? 
-                    "Type at least 3 characters to search" : 
-                    "No results found"}
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+                  <div className="text-4xl mb-3">🔍</div>
+                  <p className="text-base font-medium mb-1">
+                    {searchQuery.length <= 2 ? "Type at least 3 characters to search" : "No results found"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {searchQuery.length > 2 ? `Try a different search term for ${editingMedia.type}` : ""}
+                  </p>
                 </div>
               )}
             </div>
           </div>
         </DialogContent>
       </Dialog>
+    <ChatbotLauncher />
     </div>
   )
 }

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase/firebase';
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { MediaItem } from '@/types/database';
+import { removeUndefinedFields } from "@/lib/utils"
+
 
 const TMDB_API = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
@@ -83,10 +85,14 @@ async function fetchFromTMDB(type: string, id: string): Promise<MediaItem | null
     // Save to Firestore for future use
     const collection = type === 'movie' ? 'movies' : 'tvshows';
     const mediaRef = doc(db, collection, mediaItem.id);
-    await setDoc(mediaRef, {
-      ...mediaItem,
-      updatedAt: new Date()
-    }, { merge: true });
+    await setDoc(
+      mediaRef,
+      {
+        ...removeUndefinedFields(mediaItem),
+        updatedAt: new Date()
+      },
+      { merge: true }
+    );
 
     return mediaItem;
   } catch (error) {
@@ -131,7 +137,7 @@ export async function GET(
     if (mediaItem) {
       // Store the fetched item in Firestore for future use
       await setDoc(doc(db, 'media', actualId), {
-        ...mediaItem,
+        ...removeUndefinedFields(mediaItem),
         type,
         id: actualId
       });

@@ -1,6 +1,7 @@
 import { db } from '@/lib/firebase/firebase';
 import { collection, doc, getDoc, setDoc, updateDoc, query, where, getDocs, addDoc, Timestamp, DocumentReference, DocumentData } from 'firebase/firestore';
 import { MediaEntry, MediaType, UserProfile, MediaItem } from '@/types/database';
+import { removeUndefinedFields } from "@/lib/utils"
 
 // User Profile Operations
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
@@ -31,7 +32,7 @@ export async function createUserProfile(userId: string, data: Partial<UserProfil
         ratingDistribution: {}
       }
     };
-    await setDoc(doc(db, 'users', userId), userProfile);
+    await setDoc(doc(db, 'users', userId), removeUndefinedFields(userProfile));
   } catch (error) {
     console.error('Error creating user profile:', error);
     throw error;
@@ -85,10 +86,10 @@ export async function addMediaEntry(
     console.log('Creating/updating library document at path:', libraryRef.path);
     
     try {
-      await setDoc(libraryRef, { 
+      await setDoc(libraryRef, removeUndefinedFields({ 
         type: mediaType,
         updatedAt: new Date() 
-      }, { merge: true });
+      }), { merge: true });
       console.log('Library document created/updated successfully');
     } catch (error) {
       console.error('Error creating library document:', error);
@@ -242,7 +243,7 @@ async function updateMediaRatingStats(
         }
       }
     };
-    await setDoc(mediaRef, mediaData);
+    await setDoc(mediaRef, removeUndefinedFields(mediaData));
     return;
   }
 

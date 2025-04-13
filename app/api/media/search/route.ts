@@ -3,6 +3,7 @@ import { searchBooks } from '@/lib/services/externalMediaService';
 import { MediaItem } from '@/types/database';
 import { db } from '@/lib/firebase/firebase';
 import { doc, setDoc, collection, query as firestoreQuery, where, getDocs } from 'firebase/firestore';
+import { removeUndefinedFields } from "@/lib/utils"
 
 const TMDB_API = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
@@ -176,7 +177,7 @@ export async function GET(request: NextRequest) {
     await Promise.all(results.map(async (item: MediaItem) => {
       const mediaRef = doc(db, 'media', item.id);
       await setDoc(mediaRef, {
-        ...item,
+        ...removeUndefinedFields(item),
         updatedAt: new Date()
       }, { merge: true });
     }));
