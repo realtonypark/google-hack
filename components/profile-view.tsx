@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import Image from "next/image"
 import { CalendarIcon, BookOpen, Film, Tv, ListChecks, ChevronLeft, ChevronRight, ChevronDown, Search, Loader2 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -16,8 +16,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/use-toast"
-import { MediaItem } from "@/types/database"
+import { MediaItem, MediaEntry, MediaType } from "@/types/database"
 import { RatingDistribution } from "@/components/rating-distribution"
+import { getUserMediaEntries } from "@/lib/firebase/firestore"
+import { format } from "date-fns"
+import { Timestamp } from 'firebase/firestore'
 
 interface ProfileViewProps {
   profile: any
@@ -43,6 +46,8 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
   const [searchResults, setSearchResults] = useState<MediaItem[]>([])
   const [profileImage, setProfileImage] = useState(profile.image || "/placeholder.svg?height=128&width=128")
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [libraryEntries, setLibraryEntries] = useState<(MediaEntry & { id: string })[]>([]);
+  const [isLoadingLibrary, setIsLoadingLibrary] = useState(true);
 
   // Mock taste data
   const tasteData = {
@@ -267,6 +272,101 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
       // 4. Update the profile image URL with the response from the server
     }
   }
+
+  const formatDate = (date: Date | Timestamp) => {
+    const jsDate = date instanceof Date ? date : date.toDate();
+    return jsDate.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  useEffect(() => {
+    const fetchLibrary = async () => {
+      if (!profile?.uid) {
+        console.log('No profile UID available');
+        return;
+      }
+      
+      try {
+        setIsLoadingLibrary(true);
+        console.log('Fetching library entries for user:', profile.uid);
+        const entries = await getUserMediaEntries(profile.uid);
+        console.log('Fetched library entries:', entries);
+        
+        // Filter out entries without required data
+        const validEntries = entries.filter(entry => 
+          entry.title && 
+          entry.watchedAt && 
+          entry.type
+        );
+        
+        setLibraryEntries(validEntries);
+      } catch (error) {
+        console.error('Error fetching library:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load media library",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingLibrary(false);
+      }
+    };
+
+    fetchLibrary();
+  }, [profile?.uid]);
+
+  // Add function to get media entries for a specific date
+  const getMediaEntriesForDate = (date: Date) => {
+    const entries = libraryEntries.filter(entry => {
+      const entryDate = entry.watchedAt instanceof Date ? entry.watchedAt : entry.watchedAt.toDate();
+      const isMatch = entryDate.toDateString() === date.toDateString();
+      if (isMatch) {
+        console.log('Found matching entry for date:', date.toDateString(), entry);
+      }
+      return isMatch;
+    });
+    
+    // Sort entries by rating in descending order
+    return entries.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+  };
+
+  // Update the calendar cell rendering
+  const renderCalendarCell = (date: Date) => {
+    const entries = getMediaEntriesForDate(date);
+    return (
+      <div key={date.toISOString()} className="aspect-square p-1">
+        <div className="relative w-full h-full">
+          {entries.length > 0 && (
+            <div className="absolute inset-0 grid grid-cols-2 gap-0.5">
+              {entries.slice(0, 2).map((entry, index) => (
+                <div key={`${entry.id}-${index}`} className="relative aspect-[2/3] rounded overflow-hidden">
+                  <img
+                    src={entry.coverImage || "/placeholder.svg"}
+                    alt={entry.title}
+                    className="object-cover w-full h-full"
+                  />
+                  {entry.rating > 0 && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-background/80 px-1 text-xs text-center">
+                      ★ {entry.rating}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {entries.length > 2 && (
+                <div className="absolute bottom-0 right-0 bg-background/80 px-1 rounded text-xs">
+                  +{entries.length - 2}
+                </div>
+              )}
+            </div>
+          )}
+          <div className="absolute top-1 left-1 text-xs">{date.getDate()}</div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="container py-10">
@@ -570,37 +670,12 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                   // Check if the day is within the current month
                   const isCurrentMonth = currentDate.getMonth() === currentMonth.getMonth()
                   
-                  // Check if this day has content (for demo purposes)
-                  const hasContent = [8, 9, 14].includes(day) && isCurrentMonth
-
-                  return (
+                  return isCurrentMonth ? renderCalendarCell(currentDate) : (
                     <div key={i} className="aspect-square p-1">
                       <div className="relative w-full h-full">
-                        {isCurrentMonth && (
-                          <>
-                            <div className="absolute top-1 left-1">{day}</div>
-                            {hasContent && (
-                              <div className="absolute inset-4 grid grid-cols-2 gap-0.5">
-                                <div className="relative aspect-[2/3] rounded overflow-hidden">
-                                  <Image
-                                    src="/placeholder.svg"
-                                    alt="Media thumbnail"
-                                    fill
-                                    className="object-cover"
-                                  />
-                                </div>
-                                <div className="relative aspect-[2/3] rounded overflow-hidden">
-                                  <Image
-                                    src="/placeholder.svg"
-                                    alt="Media thumbnail"
-                                    fill
-                                    className="object-cover"
-                                  />
-                                </div>
-                              </div>
-                            )}
-                          </>
-                        )}
+                        <div className="absolute top-1 left-1 text-xs text-muted-foreground">
+                          {day}
+                        </div>
                       </div>
                     </div>
                   )
@@ -627,34 +702,48 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 <TabsContent value="library" className="mt-0">
                   <ScrollArea className="h-[400px]">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-1">
-                      {mockLibrary.map((item) => (
-                        <div key={item.id} className="flex gap-3 p-2 border rounded-lg">
-                          <div className="w-16 h-24 relative overflow-hidden rounded">
-                            <img
-                              src={item.coverImage || "/placeholder.svg"}
-                              alt={item.title}
-                              className="object-cover w-full h-full"
-                            />
-                          </div>
-                          <div className="flex flex-col justify-between">
-                            <div>
-                              <h3 className="font-medium line-clamp-1">{item.title}</h3>
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                {item.type === "movie" && <Film className="h-3 w-3" />}
-                                {item.type === "book" && <BookOpen className="h-3 w-3" />}
-                                {item.type === "series" && <Tv className="h-3 w-3" />}
-                                <span className="capitalize">{item.type}</span>
-                                <span>•</span>
-                                <span>{item.year}</span>
+                      {isLoadingLibrary ? (
+                        <div className="col-span-2 flex justify-center py-8">
+                          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : libraryEntries.length === 0 ? (
+                        <div className="col-span-2 text-center py-8 text-muted-foreground">
+                          No media entries yet
+                        </div>
+                      ) : (
+                        libraryEntries.map((item) => (
+                          <div key={item.id} className="flex gap-3 p-2 border rounded-lg">
+                            <div className="w-16 h-24 relative overflow-hidden rounded">
+                              <img
+                                src={item.coverImage || "/placeholder.svg"}
+                                alt={item.title}
+                                className="object-cover w-full h-full"
+                              />
+                            </div>
+                            <div className="flex flex-col justify-between">
+                              <div>
+                                <h3 className="font-medium line-clamp-1">{item.title}</h3>
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  {item.type === "movie" && <Film className="h-3 w-3" />}
+                                  {item.type === "book" && <BookOpen className="h-3 w-3" />}
+                                  {item.type === "tv" && <Tv className="h-3 w-3" />}
+                                  <span className="capitalize">{item.type}</span>
+                                  {item.rating > 0 && (
+                                    <>
+                                      <span>•</span>
+                                      <span>★ {item.rating}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center text-xs text-muted-foreground">
+                                <CalendarIcon className="h-3 w-3 mr-1" />
+                                Added: {formatDate(item.watchedAt)}
                               </div>
                             </div>
-                            <div className="flex items-center text-xs text-muted-foreground">
-                              <CalendarIcon className="h-3 w-3 mr-1" />
-                              Added: {new Date(item.dateAdded).toLocaleDateString()}
-                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </ScrollArea>
                 </TabsContent>

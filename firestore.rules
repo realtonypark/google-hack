@@ -11,18 +11,40 @@ service cloud.firestore {
         request.auth.token.email.matches('.*@example\\.com$');
     }
 
-    // Users collection
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Users collection and all nested collections
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.auth.uid == userId;
       allow update: if isAuthenticated() && request.auth.uid == userId;
       allow delete: if isAdmin();
+
+      // Library collection
+      match /library/{mediaType} {
+        allow read: if isAuthenticated();
+        allow write: if isOwner(userId);
+
+        // Entries subcollection
+        match /entries/{entryId} {
+          allow read: if isAuthenticated();
+          allow write: if isOwner(userId);
+        }
+      }
     }
 
     // Media collection
     match /media/{mediaId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAuthenticated();  // Allow authenticated users to update media stats
+
+      // Media stats subcollection
+      match /stats/{statsId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+      }
     }
 
     // Reviews collection

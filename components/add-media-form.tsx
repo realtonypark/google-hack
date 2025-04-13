@@ -138,6 +138,8 @@ export default function AddMediaForm() {
       const mediaData = {
         ...values,
         mediaId: selectedMedia.id,
+        title: selectedMedia.title,
+        coverImage: selectedMedia.coverImage || '',
       }
 
       await addMediaToLibrary(mediaData)

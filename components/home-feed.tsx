@@ -10,6 +10,8 @@ import MediaSearchResults from "@/components/media-search-results"
 import { MediaItem } from "@/types/database"
 import { useToast } from "@/components/ui/use-toast"
 import { useDebouncedCallback } from 'use-debounce'
+import { Timestamp } from 'firebase/firestore'
+import { useRouter } from "next/navigation"
 
 export default function HomeFeed() {
   const { user, loading } = useAuth()
@@ -18,6 +20,11 @@ export default function HomeFeed() {
   const [isSearching, setIsSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<MediaItem[]>([])
   const [searchError, setSearchError] = useState<string | null>(null)
+  const router = useRouter()
+
+  const handleMediaSelect = useCallback((media: MediaItem) => {
+    router.push(`/media/${media.id}`)
+  }, [router])
 
   const performSearch = useDebouncedCallback(async (query: string) => {
     if (query.length < 2) {
@@ -70,6 +77,15 @@ export default function HomeFeed() {
     performSearch(value);
   };
 
+  const formatDate = (date: Date | Timestamp) => {
+    const jsDate = date instanceof Date ? date : date.toDate();
+    return jsDate.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   // Move loading check after all hooks
   if (loading) {
     return <div className="container py-6 flex justify-center">Loading...</div>
@@ -93,11 +109,15 @@ export default function HomeFeed() {
         )}
       </div>
 
-      {searchResults.length > 0 ? (
-        <div className="max-w-4xl mx-auto">
-          <MediaSearchResults results={searchResults} />
-        </div>
-      ) : searchError ? (
+      {searchResults.length > 0 && (
+        <MediaSearchResults
+          results={searchResults}
+          onSelect={handleMediaSelect}
+          formatDate={formatDate}
+        />
+      )}
+
+      {searchError ? (
         <div className="text-center text-muted-foreground">
           {searchError}
         </div>

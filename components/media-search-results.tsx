@@ -7,9 +7,10 @@ import { MediaItem } from "@/types/database"
 interface MediaSearchResultsProps {
   results: MediaItem[]
   onSelect?: (media: MediaItem) => void
+  formatDate?: (date: Date | any) => string
 }
 
-export default function MediaSearchResults({ results, onSelect }: MediaSearchResultsProps) {
+export default function MediaSearchResults({ results, onSelect, formatDate }: MediaSearchResultsProps) {
   const router = useRouter()
 
   if (results.length === 0) {
@@ -45,6 +46,7 @@ export default function MediaSearchResults({ results, onSelect }: MediaSearchRes
                 <h3 className="font-medium">{result.title}</h3>
                 <p className="text-xs text-muted-foreground">
                   {result.type} • {result.releaseDate ? new Date(result.releaseDate).getFullYear() : 'N/A'}
+                  {result.watchedAt && formatDate && ` • Watched ${formatDate(result.watchedAt)}`}
                 </p>
               </div>
             </button>

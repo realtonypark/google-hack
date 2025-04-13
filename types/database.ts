@@ -1,3 +1,5 @@
+import { Timestamp } from 'firebase/firestore';
+
 export interface User {
   id: string;
   email: string;
@@ -11,20 +13,72 @@ export interface User {
   lastActive: Date;
 }
 
+export type MediaType = 'movie' | 'tv' | 'book';
+
+export interface MediaEntry {
+  rating: number;
+  tag?: string;
+  review?: string;
+  createdAt: Date | Timestamp;
+  updatedAt: Date | Timestamp;
+  watchedAt: Date | Timestamp;
+  title: string;
+  coverImage: string;
+  mediaId: string;
+  type: MediaType;
+}
+
+export interface UserProfile {
+  uid: string;
+  email: string;
+  displayName: string;
+  photoURL?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  favoriteMedia?: {
+    movie?: {
+      mediaId: string;
+      title: string;
+      coverImage: string;
+    };
+    tv?: {
+      mediaId: string;
+      title: string;
+      coverImage: string;
+    };
+    book?: {
+      mediaId: string;
+      title: string;
+      coverImage: string;
+    };
+  };
+  stats?: {
+    totalRatings: number;
+    averageRating: number;
+    ratingDistribution: {
+      [key: string]: number; // "0.5" to "5.0"
+    };
+  };
+}
+
+export interface MediaStats {
+  totalRatings: number;
+  averageRating: number;
+  ratingDistribution: {
+    [key: string]: number; // "0.5" to "5.0"
+  };
+}
+
 export interface MediaItem {
   id: string;
-  type: 'movie' | 'tv' | 'book';
+  type: MediaType;
   title: string;
-  description: string;
-  genres: string[];
-  releaseDate?: string;
-  authors?: string[];
-  directors?: string[];
-  cast?: string[];
+  description?: string;
   coverImage?: string;
-  rating: number;
-  totalRatings: number;
-  externalId: string; // For Google Books API or TMDB
+  releaseDate?: string;
+  genres?: string[];
+  externalId?: string;
+  stats?: MediaStats;
 }
 
 export interface UserReview {

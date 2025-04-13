@@ -737,6 +737,9 @@ video {
 .z-\[1\] {
   z-index: 1;
 }
+.col-span-2 {
+  grid-column: span 2 / span 2;
+}
 .-mx-1 {
   margin-left: -0.25rem;
   margin-right: -0.25rem;
@@ -912,9 +915,6 @@ video {
 }
 .h-9 {
   height: 2.25rem;
-}
-.h-\[120px\] {
-  height: 120px;
 }
 .h-\[1px\] {
   height: 1px;
@@ -1486,6 +1486,14 @@ video {
 .bg-muted\/50 {
   background-color: hsl(var(--muted) / 0.5);
 }
+.bg-pink-100 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(252 231 243 / var(--tw-bg-opacity, 1));
+}
+.bg-pink-500 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(236 72 153 / var(--tw-bg-opacity, 1));
+}
 .bg-popover {
   background-color: hsl(var(--popover));
 }
@@ -1502,22 +1510,17 @@ video {
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
 }
-.bg-pink-100 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(252 231 243 / var(--tw-bg-opacity, 1));
-}
-.bg-pink-500 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(236 72 153 / var(--tw-bg-opacity, 1));
+.bg-background\/80 {
+  background-color: hsl(var(--background) / 0.8);
 }
 .fill-current {
   fill: currentColor;
 }
-.fill-yellow-400 {
-  fill: #facc15;
-}
 .fill-transparent {
   fill: transparent;
+}
+.fill-yellow-400 {
+  fill: #facc15;
 }
 .object-cover {
   -o-object-fit: cover;
@@ -1644,14 +1647,14 @@ video {
 .pt-1 {
   padding-top: 0.25rem;
 }
+.pt-2 {
+  padding-top: 0.5rem;
+}
 .pt-3 {
   padding-top: 0.75rem;
 }
 .pt-4 {
   padding-top: 1rem;
-}
-.pt-2 {
-  padding-top: 0.5rem;
 }
 .text-left {
   text-align: left;
@@ -1675,9 +1678,6 @@ video {
 .text-3xl {
   font-size: 1.875rem;
   line-height: 2.25rem;
-}
-.text-\[0\.70rem\] {
-  font-size: 0.70rem;
 }
 .text-\[0\.8rem\] {
   font-size: 0.8rem;
@@ -1713,9 +1713,6 @@ video {
 }
 .font-semibold {
   font-weight: 600;
-}
-.uppercase {
-  text-transform: uppercase;
 }
 .capitalize {
   text-transform: capitalize;
@@ -1780,6 +1777,9 @@ video {
 .text-secondary-foreground {
   color: hsl(var(--secondary-foreground));
 }
+.text-transparent {
+  color: transparent;
+}
 .text-white {
   --tw-text-opacity: 1;
   color: rgb(255 255 255 / var(--tw-text-opacity, 1));
@@ -1787,9 +1787,6 @@ video {
 .text-yellow-400 {
   --tw-text-opacity: 1;
   color: rgb(250 204 21 / var(--tw-text-opacity, 1));
-}
-.text-transparent {
-  color: transparent;
 }
 .underline-offset-4 {
   text-underline-offset: 4px;
@@ -1808,9 +1805,6 @@ video {
 }
 .opacity-90 {
   opacity: 0.9;
-}
-.opacity-100 {
-  opacity: 1;
 }
 .shadow-\[0_0_0_1px_hsl\(var\(--sidebar-border\)\)\] {
   --tw-shadow: 0 0 0 1px hsl(var(--sidebar-border));

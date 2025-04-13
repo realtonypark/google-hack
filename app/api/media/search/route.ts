@@ -1,27 +1,56 @@
-import { NextResponse } from 'next/server';
-import { searchMedia, searchByGenre } from '@/lib/services/searchService';
+import { NextRequest, NextResponse } from 'next/server';
+import { searchMovies, searchTVShows } from '@/lib/services/tmdbService';
+import { searchBooks } from '@/lib/services/externalMediaService';
+import { MediaItem } from '@/types/database';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const searchParams = request.nextUrl.searchParams;
+  const query = searchParams.get('q');
+  const type = searchParams.get('type');
+
+  if (!query) {
+    return NextResponse.json({ error: 'Query parameter is required' }, { status: 400 });
+  }
+
   try {
-    const { searchParams } = new URL(request.url);
-    const query = searchParams.get('q');
-    const typeParam = searchParams.get('type');
-    const type = typeParam as 'book' | 'movie' | 'series' | undefined;
-    const genre = searchParams.get('genre');
-    const maxResults = Number(searchParams.get('limit')) || 10;
+    let results: MediaItem[] = [];
 
-    if (!query && !genre) {
-      return NextResponse.json(
-        { error: 'Either query or genre parameter is required' },
-        { status: 400 }
-      );
-    }
-
-    let results;
-    if (genre) {
-      results = await searchByGenre(genre, type, maxResults);
-    } else if (query) {
-      results = await searchMedia(query, type, maxResults);
+    switch (type) {
+      case 'movie':
+        results = await searchMovies(query);
+        // Ensure IDs are prefixed with type
+        results = results.map((item: MediaItem) => ({
+          ...item,
+          id: `movie-${item.id}`
+        }));
+        break;
+      case 'tv':
+        results = await searchTVShows(query);
+        results = results.map((item: MediaItem) => ({
+          ...item,
+          id: `tv-${item.id}`
+        }));
+        break;
+      case 'book':
+        results = await searchBooks(query);
+        results = results.map((item: MediaItem) => ({
+          ...item,
+          id: `book-${item.id}`
+        }));
+        break;
+      default:
+        // If no type specified, search all
+        const [movies, tvShows, books] = await Promise.all([
+          searchMovies(query),
+          searchTVShows(query),
+          searchBooks(query)
+        ]);
+        
+        results = [
+          ...movies.map((item: MediaItem) => ({ ...item, id: `movie-${item.id}` })),
+          ...tvShows.map((item: MediaItem) => ({ ...item, id: `tv-${item.id}` })),
+          ...books.map((item: MediaItem) => ({ ...item, id: `book-${item.id}` }))
+        ];
     }
 
     return NextResponse.json(results);
