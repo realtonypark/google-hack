@@ -38,6 +38,17 @@ export async function getRecommendations(type: RecommendationType, userId: strin
 
   // Step 6: Match parsed recommendations to Firestore media
   const matchedMedia = await matchRecommendationsFromFirestore(parsed)
+  const isValidMediaItem = (item: MediaItem) => {
+    return (
+      item.coverImage &&
+      !item.coverImage.includes("placeholder") &&
+      item.description &&
+      item.description !== "This recommended title was not found in our database." &&
+      item.description !== "Error finding this recommendation."
+    )
+  }
 
-  return matchedMedia
+  const filtered = matchedMedia.filter(isValidMediaItem)
+
+  return filtered
 }

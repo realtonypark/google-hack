@@ -35,7 +35,7 @@ export async function matchRecommendationsFromFirestore(
   const mediaRef = collection(db, "media");
   
   // Maximum recommendations to return
-  const MAX_RECOMMENDATIONS = 20;
+  const MAX_RECOMMENDATIONS = 10;
   
   // Process each recommendation until we reach our limit
   for (const rec of parsed) {

@@ -15,16 +15,6 @@ export function generateRecommendationPrompt(profile: string, type: "personal" |
   8. Title (Year)
   9. Title (Year)
   10. Title (Year)
-  11. Title (Year)
-  12. Title (Year)
-  13. Title (Year)
-  14. Title (Year)
-  15. Title (Year)
-  16. Title (Year)
-  17. Title (Year)
-  18. Title (Year)
-  19. Title (Year)
-  20. Title (Year)
 
   If no year is available, just write the title.
   `;
@@ -35,7 +25,7 @@ export function generateRecommendationPrompt(profile: string, type: "personal" |
   ${profile}
   
   [Task]
-  Based on the user profile above, recommend 20 pieces of media (movies, TV shows, or books) that closely match the user's known preferences. When you start, state what media in the library you use to analyze the user's preference.
+  Based on the user profile above, recommend 10 pieces of media (movies, TV shows, or books) that closely match the user's known preferences. When you start, state what media in the library you use to analyze the user's preference.
   
   Guidelines:
   - All recommendations should align strongly with the user's past likes in terms of genre, theme, tone, and style.
@@ -51,7 +41,7 @@ export function generateRecommendationPrompt(profile: string, type: "personal" |
   ${profile}
   
   [Task]
-  Recommend 20 media items (movies, TV shows, or books) that help the user expand their tastes, while still maintaining some degree of relevance to their existing preferences.
+  Recommend 10 media items (movies, TV shows, or books) that help the user expand their tastes, while still maintaining some degree of relevance to their existing preferences.
   
   Guidelines:
   - Maintain 30% alignment with the user's known preferences.
