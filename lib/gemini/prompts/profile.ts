@@ -31,6 +31,7 @@ Please identify:
 - Frequently liked genres, themes, and tones
 - Patterns in tags or emotional responses from reviews
 - Possible dislikes or avoidance patterns
+- What the user might be interested in, although the user is not showing strong favor towards it to help them explore
 
 Summarize the user's taste in clear and concise natural language. Do not recommend anything yet.
 `

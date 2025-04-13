@@ -40,15 +40,22 @@ export function generateRecommendationPrompt(profile: string, type: "personal" |
   [User Profile Summary]
   ${profile}
   
-  [Task]
-  Recommend 10 media items (movies, TV shows, or books) that help the user expand their tastes, while still maintaining some degree of relevance to their existing preferences.
-  
-  Guidelines:
-  - Maintain 15% alignment with the user's known preferences.
-  - Introduce 85% novelty through new genres, countries, or historical periods.
-  - Prioritize famous, well known media
-  - At least 1 recommendation should be from an underrepresented region or non-mainstream genre.
-  - Each item should include the title, release year
+[Task]
+Recommend 10 media items that serve as "stepping stones" to expand tastes while maintaining organic relevance.
+
+Guidelines:
+1. **Bridge Ratio**  
+   15% connection to existing preferences (genre/theme/style)  
+   85% novel elements (culture/era/format)
+
+2. **Progressive Exposure**  
+   - 3 items: Adjacent genres (e.g. Fantasy → Magical Realism)  
+   - 3 items: Cross-cultural adaptations (e.g. UK novel → Japanese film)  
+   - 2 items: Temporal shifts (modern → 1970s classics)  
+   - 2 items: Format hybrids (graphic novel → live action)
+
+3. **Quality Gate**  
+   - Minimum 7.0 IMDB/Goodreads rating    
   
   ${sharedInstructions}
   `;
