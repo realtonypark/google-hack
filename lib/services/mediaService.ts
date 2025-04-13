@@ -1,4 +1,4 @@
-import { db } from '../firebase';
+import { db } from '../firebase/firebase';
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, increment } from 'firebase/firestore';
 import { MediaItem, UserReview, Recommendation } from '@/types/database';
 import { GoogleGenerativeAI } from '@google/generative-ai';

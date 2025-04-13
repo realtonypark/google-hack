@@ -138,15 +138,6 @@ export default function HomeFeed() {
               description="Explore beyond your usual genres"
               type="broaden"
             />
-            {/* Conditionally show this section if user has friends */}
-            <RecommendationSection
-              title="Popular Among Friends"
-              description="What your connections are enjoying"
-              type="friends"
-            />
-          </TabsContent>
-          <TabsContent value="trending" className="space-y-8 mt-6">
-            <RecommendationSection title="Trending Now" description="Popular across the platform" type="trending" />
           </TabsContent>
         </Tabs>
       )}

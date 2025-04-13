@@ -1,18 +1,16 @@
 // This file contains API functions for interacting with the backend
 
-import { addMediaEntry, updateFavoriteMedia } from '@/lib/firebase/firestore';
-import { auth } from '@/lib/firebase/firebase';
-import { MediaEntry, MediaType } from '@/types/database';
-
 // Get recommendations based on type
-export async function getRecommendations(type: string) {
-  // In a real app, this would be a fetch to your API
-  // For demo purposes, we'll return mock data
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([])
-    }, 500)
-  })
+// lib/api.ts
+
+import { addMediaEntry, updateFavoriteMedia } from '@/lib/firebase/firestore';
+import { auth } from '@/lib/firebase/firebase';
+import { MediaEntry, MediaType } from '@/types/database';
+import { getRecommendations as realGetRecommendations } from "@/lib/recommendations/getRecommendations"
+import { MediaEntryInput} from '@/types/database'
+
+export async function getRecommendations(type: string, userId: string) {
+  return realGetRecommendations(type as "personal" | "broaden", userId)
 }
 
 // Search for media by title and type
@@ -60,22 +58,23 @@ export async function addMediaToLibrary(mediaData: {
   const mediaType = type as MediaType;
   
   // Create the entry data
-  const entry: Omit<MediaEntry, 'createdAt' | 'updatedAt'> = {
+  const entry: MediaEntryInput = {
+    userId: user.uid,
     rating: mediaData.rating || 0,
     tag: mediaData.tags,
     review: mediaData.notes,
-    watchedAt: mediaData.date || new Date(), // Use provided date or current date
-    title: mediaData.title || '', // Store title for easy reference
-    coverImage: mediaData.coverImage || '', // Store cover image for easy reference
+    watchedAt: mediaData.date || new Date(),
+    title: mediaData.title || '',
+    coverImage: mediaData.coverImage || '',
     mediaId: id,
-    type: mediaType
+    type: mediaType,
   };
 
   console.log('Adding media entry:', entry); // Add logging
 
   // Add the entry to the user's library
-  const entryId = await addMediaEntry(user.uid, mediaType, id, entry);
-
+  const entryId = await addMediaEntry(user.uid, mediaType, id, entry)
+  
   return entryId;
 }
 
@@ -100,8 +99,9 @@ export async function addToLibrary(mediaId: string) {
   const mediaDetails = await response.json();
 
   const mediaType = type as MediaType;
-  const entry: Omit<MediaEntry, 'createdAt' | 'updatedAt'> = {
-    rating: 0, // Default rating
+  const entry: MediaEntryInput = {
+    userId: user.uid,
+    rating: 0,
     watchedAt: new Date(),
     title: mediaDetails.title || '',
     coverImage: mediaDetails.coverImage || '',

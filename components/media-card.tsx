@@ -89,11 +89,12 @@ export default function MediaCard({ media }: MediaCardProps) {
           </div>
           <h3 className="font-semibold leading-tight">{media.title}</h3>
           <div className="flex flex-wrap gap-1">
-            {media.genres.slice(0, 2).map((genre) => (
-              <Badge key={genre} variant="outline" className="text-xs">
-                {genre}
-              </Badge>
-            ))}
+          {Array.isArray(media.genres) &&
+      media.genres.slice(0, 2).map((genre) => (
+    <Badge key={genre} variant="outline" className="text-xs">
+      {genre}
+    </Badge>
+  ))}
           </div>
           {media.recommendedBy && (
             <p className="text-xs text-muted-foreground pt-1">Recommended by {media.recommendedBy}</p>

@@ -10,7 +10,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 interface RecommendationSectionProps {
   title: string
   description: string
-  type: "personal" | "broaden" | "friends" | "trending"
+  type: "personal" | "broaden"
 }
 
 export default function RecommendationSection({ title, description, type }: RecommendationSectionProps) {
@@ -20,19 +20,21 @@ export default function RecommendationSection({ title, description, type }: Reco
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    console.log("🧩 useEffect triggered", { user, authLoading })
+
     const fetchRecommendations = async () => {
+      console.log("📡 inside fetchRecommendations")
       // Wait for auth to be ready and user to be available
       if (authLoading) return
-      
       if (user) {
         setIsLoading(true)
         try {
-          const data = await getRecommendations(type)
+          const data = await getRecommendations(type, user.uid)
+          console.log("💡 Recommendations for", type, "=>", data)
           setRecommendations(data)
         } catch (error) {
           console.error("Failed to fetch recommendations:", error)
           // Use placeholder data for demo
-          setRecommendations(getPlaceholderData(type))
         } finally {
           setIsLoading(false)
         }
@@ -71,81 +73,3 @@ export default function RecommendationSection({ title, description, type }: Reco
   )
 }
 
-// Placeholder data for demo purposes
-function getPlaceholderData(type: string) {
-  const baseItems = [
-    {
-      id: "1",
-      title: "The Shawshank Redemption",
-      type: "movie",
-      coverImage: "/placeholder.svg?height=400&width=250",
-      year: "1994",
-      genres: ["Drama"],
-    },
-    {
-      id: "2",
-      title: "The Lord of the Rings",
-      type: "book",
-      coverImage: "/placeholder.svg?height=400&width=250",
-      year: "1954",
-      genres: ["Fantasy", "Adventure"],
-    },
-    {
-      id: "3",
-      title: "Breaking Bad",
-      type: "series",
-      coverImage: "/placeholder.svg?height=400&width=250",
-      year: "2008",
-      genres: ["Crime", "Drama", "Thriller"],
-    },
-    {
-      id: "4",
-      title: "Inception",
-      type: "movie",
-      coverImage: "/placeholder.svg?height=400&width=250",
-      year: "2010",
-      genres: ["Sci-Fi", "Action"],
-    },
-    {
-      id: "5",
-      title: "1984",
-      type: "book",
-      coverImage: "/placeholder.svg?height=400&width=250",
-      year: "1949",
-      genres: ["Dystopian", "Sci-Fi"],
-    },
-    {
-      id: "6",
-      title: "Stranger Things",
-      type: "series",
-      coverImage: "/placeholder.svg?height=400&width=250",
-      year: "2016",
-      genres: ["Horror", "Sci-Fi"],
-    },
-  ]
-
-  // Modify items based on recommendation type
-  if (type === "broaden") {
-    return baseItems.map((item) => ({
-      ...item,
-      title: "Discover: " + item.title,
-    }))
-  }
-
-  if (type === "friends") {
-    return baseItems.map((item) => ({
-      ...item,
-      recommendedBy: "Jane Doe",
-    }))
-  }
-
-  if (type === "trending") {
-    return baseItems.map((item) => ({
-      ...item,
-      trending: true,
-      trendingRank: Math.floor(Math.random() * 100) + 1,
-    }))
-  }
-
-  return baseItems
-}

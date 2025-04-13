@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/use-toast"
 import { MediaItem, MediaEntry, MediaType } from "@/types/database"
 import { RatingDistribution } from "@/components/rating-distribution"
-import { getUserMediaEntries } from "@/lib/firebase/firestore"
+import { getUserMediaEntries } from "@/lib/firebase/firestore"
 import { format } from "date-fns"
 import { Timestamp } from 'firebase/firestore'
 

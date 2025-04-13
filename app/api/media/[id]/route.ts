@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
+import { db } from '@/lib/firebase/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
 export async function GET(

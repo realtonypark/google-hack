@@ -621,9 +621,6 @@ video {
 .inset-0 {
   inset: 0px;
 }
-.inset-4 {
-  inset: 1rem;
-}
 .inset-x-0 {
   left: 0px;
   right: 0px;
@@ -1454,6 +1451,9 @@ video {
 .bg-background {
   background-color: hsl(var(--background));
 }
+.bg-background\/80 {
+  background-color: hsl(var(--background) / 0.8);
+}
 .bg-background\/95 {
   background-color: hsl(var(--background) / 0.95);
 }
@@ -1509,9 +1509,6 @@ video {
 .bg-white {
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
-}
-.bg-background\/80 {
-  background-color: hsl(var(--background) / 0.8);
 }
 .fill-current {
   fill: currentColor;
