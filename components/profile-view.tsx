@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/use-toast"
 import { MediaItem } from "@/types/database"
+import { RatingDistribution } from "@/components/rating-distribution"
 
 interface ProfileViewProps {
   profile: any
@@ -155,13 +156,18 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
     averageRating: 3.7,
     numberOfRatings: 295,
     mostFrequent: 4.0,
-    distribution: [
-      { rating: "1", count: 10 },
-      { rating: "2", count: 15 },
-      { rating: "3", count: 35 },
-      { rating: "4", count: 45 },
-      { rating: "5", count: 25 },
-    ],
+    distribution: {
+      "0.5": 5,
+      "1.0": 10,
+      "1.5": 12,
+      "2.0": 15,
+      "2.5": 20,
+      "3.0": 35,
+      "3.5": 45,
+      "4.0": 80,
+      "4.5": 50,
+      "5.0": 23
+    }
   }
 
   const handleEditMedia = (type: keyof FavoriteMediaCollection) => {
@@ -189,7 +195,9 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
     if (query.length > 2) {
       setIsSearching(true)
       try {
-        const response = await fetch(`/api/media/search?q=${encodeURIComponent(query)}&type=${editingMedia.type}`);
+        // Convert media type to API expected format
+        const mediaType = editingMedia.type === 'series' ? 'tv' : editingMedia.type;
+        const response = await fetch(`/api/media/search?q=${encodeURIComponent(query)}&type=${mediaType}`);
         if (!response.ok) {
           throw new Error('Search failed');
         }
@@ -465,69 +473,13 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                         <div className="text-xs text-muted-foreground">Most frequent</div>
                       </div>
                     </div>
-                    <div className="h-[120px] w-full px-2">
-                      <ChartContainer
-                        config={{
-                          bar: {
-                            theme: {
-                              light: "#ec4899",
-                              dark: "#ec4899",
-                            },
-                          },
-                        }}
-                        className="pb-4"
-                      >
-                        <BarChart
-                          data={ratingData.distribution}
-                          margin={{ top: 0, right: 5, bottom: 45, left: 5 }}
-                        >
-                          <XAxis 
-                            dataKey="rating" 
-                            fontSize={12} 
-                            tickLine={false} 
-                            axisLine={true}
-                            stroke="#e5e7eb"
-                            dy={10}
-                          />
-                          <YAxis hide />
-                          <Tooltip
-                            cursor={{ fill: "transparent" }}
-                            content={({ active, payload }) => {
-                              if (active && payload && payload.length) {
-                                return (
-                                  <div className="rounded-lg border bg-background p-2 shadow-sm">
-                                    <div className="grid grid-cols-2 gap-2">
-                                      <div className="flex flex-col">
-                                        <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                          Rating
-                                        </span>
-                                        <span className="font-bold text-muted-foreground">
-                                          {payload[0].payload.rating}
-                                        </span>
-                                      </div>
-                                      <div className="flex flex-col">
-                                        <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                          Count
-                                        </span>
-                                        <span className="font-bold">
-                                          {payload[0].payload.count}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )
-                              }
-                              return null
-                            }}
-                          />
-                          <Bar
-                            dataKey="count"
-                            radius={[4, 4, 0, 0]}
-                            fill="var(--color-bar)"
-                            maxBarSize={40}
-                          />
-                        </BarChart>
-                      </ChartContainer>
+                    <div className="px-2">
+                      <div className="w-full max-w-lg">
+                        <RatingDistribution 
+                          distribution={ratingData.distribution}
+                          totalRatings={Object.values(ratingData.distribution).reduce((a, b) => a + b, 0)}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

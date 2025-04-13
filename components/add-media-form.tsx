@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { format } from "date-fns"
-import { CalendarIcon, Loader2, Search } from "lucide-react"
+import { CalendarIcon, Loader2, Search, X } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,26 +18,60 @@ import { addMediaToLibrary } from "@/lib/api"
 import MediaSearchResults from "@/components/media-search-results"
 import { MediaItem } from "@/types/database"
 import { useDebouncedCallback } from 'use-debounce'
+import { Rating } from "@/components/ui/rating"
+import { useSearchParams } from "next/navigation"
 
 const formSchema = z.object({
   date: z.date().optional(),
   tags: z.string().optional(),
   notes: z.string().optional(),
+  rating: z.number().min(0.5).max(5).optional(),
   addToWatchlist: z.boolean().optional(),
 })
 
 export default function AddMediaForm() {
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
   const [isSearching, setIsSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<MediaItem[]>([])
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null)
+  const [isLoadingMedia, setIsLoadingMedia] = useState(false)
+
+  // Fetch pre-selected media if mediaId is provided in URL
+  useEffect(() => {
+    const mediaId = searchParams.get('mediaId')
+    if (mediaId) {
+      const fetchMedia = async () => {
+        setIsLoadingMedia(true)
+        try {
+          const response = await fetch(`/api/media/${mediaId}`)
+          if (!response.ok) {
+            throw new Error('Failed to fetch media')
+          }
+          const data = await response.json()
+          setSelectedMedia(data)
+        } catch (error) {
+          console.error('Error fetching media:', error)
+          toast({
+            title: "Error",
+            description: "Failed to load media details",
+            variant: "destructive",
+          })
+        } finally {
+          setIsLoadingMedia(false)
+        }
+      }
+      fetchMedia()
+    }
+  }, [searchParams, toast])
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       tags: "",
       notes: "",
+      rating: 0,
       addToWatchlist: false,
     },
   })
@@ -134,56 +168,95 @@ export default function AddMediaForm() {
         <p className="text-sm text-muted-foreground">What did you watch/read?</p>
       </div>
 
-      <div className="space-y-4">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search for books, movies or TV shows..."
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => handleSearchInput(e.target.value)}
-          />
-          {isSearching && (
-            <div className="absolute right-2.5 top-2.5">
-              <Loader2 className="h-4 w-4 animate-spin" />
+      {!selectedMedia && !isLoadingMedia && (
+        <div className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search for books, movies or TV shows..."
+              className="pl-8"
+              value={searchQuery}
+              onChange={(e) => handleSearchInput(e.target.value)}
+            />
+            {isSearching && (
+              <div className="absolute right-2.5 top-2.5">
+                <Loader2 className="h-4 w-4 animate-spin" />
+              </div>
+            )}
+          </div>
+
+          {searchResults.length > 0 && (
+            <div className="max-w-4xl">
+              <MediaSearchResults results={searchResults} onSelect={handleSelectMedia} />
             </div>
           )}
         </div>
+      )}
 
-        {searchResults.length > 0 && (
-          <div className="max-w-4xl">
-            <MediaSearchResults results={searchResults} onSelect={handleSelectMedia} />
-          </div>
-        )}
+      {isLoadingMedia && (
+        <div className="flex justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      )}
 
-        {selectedMedia && (
-          <div className="flex items-center gap-4 p-4 border rounded-lg bg-muted/50">
-            <div className="w-16 h-24 relative overflow-hidden rounded">
-              <img
-                src={selectedMedia.coverImage || "/placeholder.svg"}
-                alt={selectedMedia.title}
-                className="object-cover w-full h-full"
-              />
-            </div>
-            <div>
-              <h3 className="font-medium">{selectedMedia.title}</h3>
-              <p className="text-sm text-muted-foreground">
-                {selectedMedia.type} • {selectedMedia.releaseDate ? new Date(selectedMedia.releaseDate).getFullYear() : 'N/A'}
-              </p>
-              <div className="flex gap-1 mt-1">
-                {selectedMedia.genres?.slice(0, 3).map((genre) => (
-                  <span key={genre} className="text-xs bg-secondary px-2 py-0.5 rounded">
-                    {genre}
-                  </span>
-                ))}
-              </div>
+      {selectedMedia && (
+        <div className="flex items-center gap-4 p-4 border rounded-lg bg-muted/50">
+          <div className="w-16 h-24 relative overflow-hidden rounded">
+            <img
+              src={selectedMedia.coverImage || "/placeholder.svg"}
+              alt={selectedMedia.title}
+              className="object-cover w-full h-full"
+            />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-medium">{selectedMedia.title}</h3>
+            <p className="text-sm text-muted-foreground">
+              {selectedMedia.type} • {selectedMedia.releaseDate ? new Date(selectedMedia.releaseDate).getFullYear() : 'N/A'}
+            </p>
+            <div className="flex gap-1 mt-1">
+              {selectedMedia.genres?.slice(0, 3).map((genre) => (
+                <span key={genre} className="text-xs bg-secondary px-2 py-0.5 rounded">
+                  {genre}
+                </span>
+              ))}
             </div>
           </div>
-        )}
-      </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              setSelectedMedia(null)
+              setSearchQuery("")
+            }}
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Clear selection</span>
+          </Button>
+        </div>
+      )}
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <FormField
+            control={form.control}
+            name="rating"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Rating</FormLabel>
+                <FormControl>
+                  <Rating
+                    value={field.value || 0}
+                    onChange={field.onChange}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Rate this media from 0.5 to 5 stars
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <FormField
             control={form.control}
             name="date"
