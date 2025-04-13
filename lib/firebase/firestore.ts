@@ -378,4 +378,21 @@ export async function getUserWatchlist(userId: string): Promise<string[]> {
     console.error('Error fetching watchlist:', error);
     return [];
   }
+}
+
+// Get all users with their favorite media
+export async function getAllUsers(): Promise<UserProfile[]> {
+  try {
+    const usersRef = collection(db, 'users');
+    const usersSnapshot = await getDocs(usersRef);
+    const users = usersSnapshot.docs.map(doc => ({
+      ...doc.data(),
+      uid: doc.id
+    })) as UserProfile[];
+    
+    return users;
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    return [];
+  }
 } 

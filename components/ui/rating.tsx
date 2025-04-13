@@ -29,7 +29,8 @@ export function Rating({ value, onChange, className, readOnly = false }: RatingP
 
   const handleClick = (index: number, position: number) => {
     if (readOnly) return
-    const rating = position < 0.5 ? index + 0.5 : index + 1
+    // When on right half, give total stars up to this star
+    const rating = position < 0.3 ? index + 0.5 : index + 1
     onChange(rating)
   }
 
@@ -67,7 +68,10 @@ export function Rating({ value, onChange, className, readOnly = false }: RatingP
             <Star
               className={cn(
                 "h-10 w-10 transition-transform",
-                index < Math.floor(displayValue) ? "fill-yellow-400 text-yellow-400" : "fill-transparent text-transparent"
+                (hoverValue !== null ? 
+                  (index <= hoverValue && (index < hoverValue || hoverPosition! >= 0.3)) : 
+                  index < Math.floor(displayValue)
+                ) ? "fill-yellow-400 text-yellow-400" : "fill-transparent text-transparent"
               )}
             />
           </div>
@@ -76,7 +80,7 @@ export function Rating({ value, onChange, className, readOnly = false }: RatingP
           <div className="absolute inset-0 overflow-hidden" style={{ 
             clipPath: 'inset(0 50% 0 0)',
             display: (
-              (hoverValue === index && hoverPosition !== null && hoverPosition < 0.5) ||
+              (hoverValue === index && hoverPosition !== null && hoverPosition < 0.3) ||
               (index === Math.floor(displayValue) && displayValue % 1 !== 0)
             ) ? 'block' : 'none'
           }}>

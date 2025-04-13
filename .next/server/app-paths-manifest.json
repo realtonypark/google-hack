@@ -1,4 +1,10 @@
 {
+  "/api/media/[id]/route": "app/api/media/[id]/route.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/media/[id]/watchlist/route": "app/api/media/[id]/watchlist/route.js",
+  "/api/media/search/route": "app/api/media/search/route.js",
   "/page": "app/page.js",
-  "/profile/[username]/page": "app/profile/[username]/page.js"
+  "/profile/[username]/page": "app/profile/[username]/page.js",
+  "/media/[id]/page": "app/media/[id]/page.js",
+  "/add/page": "app/add/page.js"
 }

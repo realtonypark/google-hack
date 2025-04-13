@@ -734,6 +734,9 @@ video {
 .z-\[1\] {
   z-index: 1;
 }
+.col-span-2 {
+  grid-column: span 2 / span 2;
+}
 .-mx-1 {
   margin-left: -0.25rem;
   margin-right: -0.25rem;
@@ -2105,6 +2108,11 @@ video {
   background-color: hsl(var(--muted) / 0.5);
 }
  
+.hover\:bg-pink-600:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(219 39 119 / var(--tw-bg-opacity, 1));
+}
+ 
 .hover\:bg-primary:hover {
   background-color: hsl(var(--primary));
 }
@@ -2135,10 +2143,6 @@ video {
  
 .hover\:text-muted-foreground:hover {
   color: hsl(var(--muted-foreground));
-}
- 
-.hover\:text-primary:hover {
-  color: hsl(var(--primary));
 }
  
 .hover\:text-primary-foreground:hover {
