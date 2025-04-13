@@ -1,13 +1,16 @@
 # Media Match - Google DevFest WashU Hackathon Project
 
-Introduction
+A web application that helps users log and discover their next favorite book, movie, or TV series using AI-powered recommendations. Built with Next.js and leveraging Google's Gemini AI, Google Books API, and TMDB API for a comprehensive media discovery experience.
 
 ## Features
 
+- 🤖 AI-powered recommendations using Google's Gemini
+- 🎬 Personalized content discovery
 - 🔐 Secure authentication with Firebase
 - 📱 Modern UI with responsive design
 - 🔄 Real-time data handling
 - 🎯 Type-safe development with TypeScript
+
 
 ## Prerequisites
 
@@ -38,7 +41,6 @@ npm run dev
 
 2. Open [http://localhost:3000](http://localhost:3000) in your browser to view the application.
 
-
 ## Tech Stack
 
 - **Frontend Framework**: Next.js 15
@@ -46,6 +48,10 @@ npm run dev
 - **Authentication**: Firebase Auth
 - **Database**: Firebase Firestore
 - **State Management**: React Context
+- **AI Integration**: Google Gemini API
+- **Media APIs**: 
+  - Google Books API for book data
+  - TMDB API for movie and TV series data
 
 
 ## License
