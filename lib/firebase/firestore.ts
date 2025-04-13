@@ -308,15 +308,19 @@ export async function getUserMediaEntries(
   mediaType?: MediaType
 ): Promise<Array<{ id: string; mediaId: string; type: MediaType } & MediaEntry>> {
   try {
+    console.log('Starting getUserMediaEntries for user:', userId);
     const entries: Array<{ id: string; mediaId: string; type: MediaType } & MediaEntry> = [];
     
     if (mediaType) {
       // Query specific media type
-      const libraryRef = doc(db, 'users', userId, 'library', mediaType);
-      const entriesSnapshot = await getDocs(collection(libraryRef, 'entries'));
+      const entriesRef = collection(db, 'users', userId, 'library', mediaType, 'entries');
+      console.log('Querying specific media type:', mediaType, 'at path:', entriesRef.path);
+      const entriesSnapshot = await getDocs(entriesRef);
+      console.log('Found entries for', mediaType, ':', entriesSnapshot.size);
       
       for (const doc of entriesSnapshot.docs) {
         const entryData = doc.data() as MediaEntry;
+        console.log('Processing entry:', entryData);
         entries.push({
           id: doc.id,
           ...entryData,
@@ -327,13 +331,17 @@ export async function getUserMediaEntries(
     } else {
       // Query all media types
       const mediaTypes: MediaType[] = ['movie', 'tv', 'book'];
+      console.log('Querying all media types:', mediaTypes);
       
       for (const type of mediaTypes) {
-        const libraryRef = doc(db, 'users', userId, 'library', type);
-        const entriesSnapshot = await getDocs(collection(libraryRef, 'entries'));
+        const entriesRef = collection(db, 'users', userId, 'library', type, 'entries');
+        console.log('Querying media type:', type, 'at path:', entriesRef.path);
+        const entriesSnapshot = await getDocs(entriesRef);
+        console.log('Found entries for', type, ':', entriesSnapshot.size);
         
         for (const doc of entriesSnapshot.docs) {
           const entryData = doc.data() as MediaEntry;
+          console.log('Processing entry:', entryData);
           entries.push({
             id: doc.id,
             ...entryData,
@@ -344,6 +352,7 @@ export async function getUserMediaEntries(
       }
     }
 
+    console.log('Total entries found:', entries.length);
     // Sort entries by watchedAt date in descending order
     entries.sort((a, b) => {
       const dateA = a.watchedAt instanceof Date ? a.watchedAt : a.watchedAt.toDate();
@@ -356,5 +365,18 @@ export async function getUserMediaEntries(
   } catch (error) {
     console.error('Error fetching user media entries:', error);
     throw error;
+  }
+}
+
+export async function getUserWatchlist(userId: string): Promise<string[]> {
+  try {
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    if (!userDoc.exists()) {
+      return [];
+    }
+    return userDoc.data().watchlist || [];
+  } catch (error) {
+    console.error('Error fetching watchlist:', error);
+    return [];
   }
 } 

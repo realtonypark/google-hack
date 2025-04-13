@@ -77,27 +77,23 @@ export interface MediaStats {
   }
 }
 
-// === Media Log Types ===
-
-// Each entry a user logs (under `library/{mediaType}/entries`)
-export interface MediaEntry {
-  userId: string
-  rating: number
-  tag?: string
-  review?: string
-  createdAt: Date | Timestamp
-  updatedAt: Date | Timestamp
-  watchedAt: Date | Timestamp
-  title: string
-  coverImage: string
-  mediaId: string
-  type: MediaType
+export interface MediaItem {
+  id: string;
+  type: MediaType;
+  title: string;
+  description?: string;
+  coverImage?: string;
+  releaseDate?: string;
+  genres?: string[];
+  externalId?: string;
+  stats?: MediaStats;
+  rating?: number;
+  totalRatings?: number;
+  authors?: string[];
+  directors?: string[];
+  cast?: string[];
 }
 
-// Input-only type (what frontend sends without Firestore-managed fields)
-export type MediaEntryInput = Omit<MediaEntry, "createdAt" | "updatedAt">
-
-// Optional: stored separately if needed
 export interface UserReview {
   id: string
   userId: string

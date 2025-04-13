@@ -8,10 +8,15 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
 import { addToLibrary } from "@/lib/api"
-import { MediaItem } from "@/types/database"
+import { MediaItem, MediaEntry } from "@/types/database"
 import { Rating } from "@/components/ui/rating"
 import { Separator } from "@/components/ui/separator"
 import { RatingDistribution } from "@/components/rating-distribution"
+import { format } from "date-fns"
+import { auth } from "@/lib/firebase/firebase"
+import { getUserMediaEntries } from "@/lib/firebase/firestore"
+import { getDoc, doc } from "firebase/firestore"
+import { db } from "@/lib/firebase/firebase"
 
 export default function MediaDetailPage() {
   const { id } = useParams()
@@ -22,6 +27,7 @@ export default function MediaDetailPage() {
   const [userRating, setUserRating] = useState(0)
   const [inWatchlist, setInWatchlist] = useState(false)
   const [ratingDistribution, setRatingDistribution] = useState<Record<string, number>>({})
+  const [userEntry, setUserEntry] = useState<MediaEntry | null>(null)
 
   useEffect(() => {
     const fetchMedia = async () => {
@@ -38,6 +44,24 @@ export default function MediaDetailPage() {
         if (distributionResponse.ok) {
           const distributionData = await distributionResponse.json()
           setRatingDistribution(distributionData.distribution)
+        }
+
+        // Check if user has logged this media
+        const user = auth.currentUser
+        if (user) {
+          const entries = await getUserMediaEntries(user.uid)
+          const userEntry = entries.find(entry => entry.mediaId === id)
+          if (userEntry) {
+            setUserEntry(userEntry)
+            setUserRating(userEntry.rating || 0)
+          }
+
+          // Check if media is in watchlist
+          const userDoc = await getDoc(doc(db, 'users', user.uid))
+          if (userDoc.exists()) {
+            const watchlist = userDoc.data().watchlist || []
+            setInWatchlist(watchlist.includes(id))
+          }
         }
       } catch (error) {
         console.error('Error fetching media:', error)
@@ -85,10 +109,22 @@ export default function MediaDetailPage() {
 
   const toggleWatchlist = async () => {
     try {
+      const user = auth.currentUser;
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to update your watchlist",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const token = await user.getIdToken();
       const response = await fetch(`/api/media/${id}/watchlist`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ add: !inWatchlist }),
       })
@@ -161,7 +197,7 @@ export default function MediaDetailPage() {
             <h1 className="text-3xl font-bold">{media.title}</h1>
             
             <div className="flex flex-wrap gap-2">
-              {media.genres.map((genre) => (
+              {media.genres?.map((genre) => (
                 <Badge key={genre} variant="secondary">
                   {genre}
                 </Badge>
@@ -170,82 +206,77 @@ export default function MediaDetailPage() {
           </div>
 
           <div className="space-y-4">
-            <div className="flex gap-4">
-              <Button
-                className="flex-1"
-                onClick={() => router.push(`/add?mediaId=${media.id}`)}
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Log this
-              </Button>
-              <Button
-                variant={inWatchlist ? "outline" : "default"}
-                className="flex-1"
-                onClick={toggleWatchlist}
-              >
-                {inWatchlist ? (
-                  <>
-                    <ListX className="mr-2 h-4 w-4" />
-                    Remove from Watchlist
-                  </>
-                ) : (
-                  <>
-                    <ListPlus className="mr-2 h-4 w-4" />
-                    Add to Watchlist
-                  </>
-                )}
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              <h2 className="text-lg font-semibold">Your Rating</h2>
-              <Rating value={userRating} onChange={handleRatingChange} />
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">MediaMatch Rating</h2>
-                <span className="text-2xl font-bold text-yellow-400">
-                  {Object.keys(ratingDistribution).length > 0 ? 
-                    (Object.entries(ratingDistribution).reduce((acc, [rating, count]) => 
-                      acc + (parseFloat(rating) * count), 0) / 
-                      Object.values(ratingDistribution).reduce((a, b) => a + b, 0)
-                    ).toFixed(1) : 
-                    '--'
-                  }
-                </span>
+            {!userEntry ? (
+              <div className="flex gap-4">
+                <Button
+                  className="flex-1"
+                  onClick={() => router.push(`/add?mediaId=${media.id}`)}
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Log this
+                </Button>
+                <Button
+                  variant={inWatchlist ? "outline" : "default"}
+                  className="flex-1"
+                  onClick={toggleWatchlist}
+                >
+                  {inWatchlist ? (
+                    <>
+                      <ListX className="mr-2 h-4 w-4" />
+                      Remove from Watchlist
+                    </>
+                  ) : (
+                    <>
+                      <ListPlus className="mr-2 h-4 w-4" />
+                      Add to Watchlist
+                    </>
+                  )}
+                </Button>
               </div>
-              {Object.keys(ratingDistribution).length > 0 ? (
-                <div className="pt-2">
-                  <RatingDistribution 
-                    distribution={ratingDistribution}
-                    totalRatings={Object.values(ratingDistribution).reduce((a, b) => a + b, 0)}
-                  />
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold">Your Log</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Date:</span>
+                    <span>{format(userEntry.watchedAt instanceof Date ? userEntry.watchedAt : userEntry.watchedAt.toDate(), 'MMMM d, yyyy')}</span>
+                  </div>
+                  {userEntry.tag && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Tag:</span>
+                      <Badge variant="secondary">{userEntry.tag}</Badge>
+                    </div>
+                  )}
+                  {userEntry.review && (
+                    <div className="space-y-1">
+                      <span className="text-muted-foreground">Review:</span>
+                      <p className="text-sm">{userEntry.review}</p>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No ratings yet • Be the first to rate
-                </p>
-              )}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Your Rating</h3>
+              <Rating
+                value={userRating}
+                onChange={handleRatingChange}
+                readOnly={!!userEntry}
+              />
             </div>
 
             <Separator />
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Community Rating (TMDB)</h2>
-                <span className="text-2xl font-bold text-yellow-400">
-                  {media.rating.toFixed(1)}
+              <h3 className="text-lg font-semibold">TMDB Rating</h3>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-bold">{media.rating ? media.rating.toFixed(1) : '--'}</span>
+                <span className="text-muted-foreground">
+                  {media.totalRatings ? `(${media.totalRatings} ratings)` : 'No ratings'}
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Based on {media.totalRatings} ratings
-              </p>
             </div>
-
-            <Separator />
           </div>
 
           <div className="space-y-4">

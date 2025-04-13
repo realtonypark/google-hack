@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { format } from "date-fns"
-import { CalendarIcon, Loader2, Search, X } from "lucide-react"
+import { CalendarIcon, Loader2, Search, X, BookOpen, Film, Tv } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,10 +16,11 @@ import { Calendar } from "@/components/ui/calendar"
 import { cn } from "@/lib/utils"
 import { addMediaToLibrary } from "@/lib/api"
 import MediaSearchResults from "@/components/media-search-results"
-import { MediaItem } from "@/types/database"
+import { MediaItem, MediaType } from "@/types/database"
 import { useDebouncedCallback } from 'use-debounce'
 import { Rating } from "@/components/ui/rating"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
+import { auth } from "@/lib/firebase/firebase"
 
 const formSchema = z.object({
   date: z.date().optional(),
@@ -30,6 +31,7 @@ const formSchema = z.object({
 })
 
 export default function AddMediaForm() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
@@ -37,6 +39,7 @@ export default function AddMediaForm() {
   const [searchResults, setSearchResults] = useState<MediaItem[]>([])
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null)
   const [isLoadingMedia, setIsLoadingMedia] = useState(false)
+  const [selectedType, setSelectedType] = useState<MediaType>('movie')
 
   // Fetch pre-selected media if mediaId is provided in URL
   useEffect(() => {
@@ -51,8 +54,7 @@ export default function AddMediaForm() {
           }
           const data = await response.json()
           setSelectedMedia(data)
-        } catch (error) {
-          console.error('Error fetching media:', error)
+        } catch {
           toast({
             title: "Error",
             description: "Failed to load media details",
@@ -85,29 +87,23 @@ export default function AddMediaForm() {
     setIsSearching(true);
     
     try {
-      console.log('Performing search for:', query);
-      const response = await fetch(`/api/media/search?q=${encodeURIComponent(query)}`);
-      console.log('Search response status:', response.status);
+      const response = await fetch(`/api/media/search?q=${encodeURIComponent(query)}${selectedType ? `&type=${selectedType}` : ''}`);
       
       if (!response.ok) {
-        throw new Error(`Search failed with status ${response.status}`);
+        setSearchResults([]);
+        return;
       }
       
       const results = await response.json();
-      console.log('Search results:', results);
       
       if (!Array.isArray(results)) {
-        throw new Error('Invalid results format received');
+        setSearchResults([]);
+        return;
       }
       
       setSearchResults(results);
-    } catch (error) {
-      console.error("Search failed:", error);
-      toast({
-        title: "Search Error",
-        description: error instanceof Error ? error.message : 'Failed to search media',
-        variant: "destructive",
-      });
+    } catch {
+      setSearchResults([]);
     } finally {
       setIsSearching(false);
     }
@@ -128,40 +124,55 @@ export default function AddMediaForm() {
     if (!selectedMedia) {
       toast({
         title: "Error",
-        description: "Please select a media item first",
+        description: "Please select a media to add",
         variant: "destructive",
-      });
-      return;
+      })
+      return
     }
 
     try {
-      const mediaData = {
-        ...values,
+      await addMediaToLibrary({
         mediaId: selectedMedia.id,
+        date: values.date,
+        tags: values.tags,
+        notes: values.notes,
+        rating: values.rating,
         title: selectedMedia.title,
-        coverImage: selectedMedia.coverImage || '',
-      }
-
-      await addMediaToLibrary(mediaData)
-
-      toast({
-        title: "Added to library",
-        description: `${selectedMedia.title} has been added to your library.`,
+        coverImage: selectedMedia.coverImage,
       })
 
-      // Reset form
-      form.reset()
-      setSelectedMedia(null)
-      setSearchQuery("")
-    } catch (error) {
-      console.error("Failed to add media:", error)
       toast({
-        title: "Failed to add",
-        description: "There was an error adding this to your library.",
+        title: "Success",
+        description: "Media added to your library",
+      })
+
+      // Navigate to the profile page after successful addition
+      const user = auth.currentUser
+      if (user) {
+        router.push(`/profile/${user.uid}`)
+      }
+    } catch (error) {
+      console.error('Error adding media:', error)
+      toast({
+        title: "Error",
+        description: "Failed to add media to library",
         variant: "destructive",
       })
     }
   }
+
+  const getSearchPlaceholder = () => {
+    switch (selectedType) {
+      case 'movie':
+        return "Search movies...";
+      case 'tv':
+        return "Search TV shows...";
+      case 'book':
+        return "Search books...";
+      default:
+        return "Search movies...";
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -172,10 +183,40 @@ export default function AddMediaForm() {
 
       {!selectedMedia && !isLoadingMedia && (
         <div className="space-y-4">
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-sm text-muted-foreground">Search by category:</p>
+            <div className="flex gap-2">
+              <Button
+                variant={selectedType === 'movie' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedType('movie')}
+              >
+                <Film className="mr-2 h-4 w-4" />
+                Movies
+              </Button>
+              <Button
+                variant={selectedType === 'tv' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedType('tv')}
+              >
+                <Tv className="mr-2 h-4 w-4" />
+                TV Shows
+              </Button>
+              <Button
+                variant={selectedType === 'book' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedType('book')}
+              >
+                <BookOpen className="mr-2 h-4 w-4" />
+                Books
+              </Button>
+            </div>
+          </div>
+
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search for books, movies or TV shows..."
+              placeholder={getSearchPlaceholder()}
               className="pl-8"
               value={searchQuery}
               onChange={(e) => handleSearchInput(e.target.value)}
@@ -314,7 +355,7 @@ export default function AddMediaForm() {
                   <Input placeholder="e.g. 'thought-provoking', 'funny', 'rewatched'" {...field} />
                 </FormControl>
                 <FormDescription>
-                Add tags, comma separated
+                Add tags to help us better recommend you contents, comma separated
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -335,7 +376,7 @@ export default function AddMediaForm() {
                   />
                 </FormControl>
                 <FormDescription>
-                Add your thoughts or notes about this media 
+                Add your thoughts or notes about this media to help us better recommend you contents
                 </FormDescription>
                 <FormMessage />
               </FormItem>
