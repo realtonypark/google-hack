@@ -393,14 +393,31 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
       setIsLoadingWatchlist(true);
       try {
         const watchlistIds = await getUserWatchlist(profile.id);
+        console.log('Watchlist IDs:', watchlistIds);
+        
         const watchlistItems = await Promise.all(
           watchlistIds.map(async (id) => {
-            const response = await fetch(`/api/media/${id}`);
-            if (!response.ok) throw new Error('Failed to fetch media');
-            return response.json();
+            try {
+              // Ensure the ID is in the correct format (type-id)
+              const formattedId = id.includes('-') ? id : `movie-${id}`;
+              console.log('Fetching media with ID:', formattedId);
+              
+              const response = await fetch(`/api/media/${formattedId}`);
+              if (!response.ok) {
+                console.error('Failed to fetch media:', response.status, response.statusText);
+                throw new Error(`Failed to fetch media: ${response.status} ${response.statusText}`);
+              }
+              return response.json();
+            } catch (error) {
+              console.error('Error fetching media item:', id, error);
+              return null; // Return null for failed items instead of throwing
+            }
           })
         );
-        setWatchlist(watchlistItems);
+        
+        // Filter out any null items from failed fetches
+        const validItems = watchlistItems.filter(item => item !== null);
+        setWatchlist(validItems);
       } catch (error) {
         console.error('Error fetching watchlist:', error);
         toast({
@@ -834,7 +851,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                             .filter(item => selectedMediaType === 'all' || item.type === selectedMediaType)
                             .map((item) => (
                               <div 
-                                key={item.id} 
+                                key={`${item.type}-${item.id}`} 
                                 className="flex gap-3 p-2 border rounded-lg hover:bg-accent cursor-pointer"
                                 onClick={() => router.push(`/media/${item.id}`)}
                               >
@@ -893,7 +910,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                           .filter(item => selectedMediaType === 'all' || item.type === selectedMediaType)
                           .map((item) => (
                             <div 
-                              key={item.id} 
+                              key={`${item.type}-${item.id}`} 
                               className="flex gap-3 p-2 border rounded-lg hover:bg-accent cursor-pointer"
                               onClick={() => router.push(`/media/${item.id}`)}
                             >

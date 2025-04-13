@@ -1,6 +1,0 @@
-{
-  "/page": "app/page.js",
-  "/profile/[username]/page": "app/profile/[username]/page.js",
-  "/media/[id]/page": "app/media/[id]/page.js",
-  "/profile/[username]/ai-report/page": "app/profile/[username]/ai-report/page.js"
-}
