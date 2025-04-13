@@ -16,12 +16,10 @@ export default async function ProfilePage({ params }: { params: Promise<Params> 
   const user = await getServerUser()
   if (!user) redirect("/login")
 
-  // Use the UID from the URL path
-  const uid = username
-  const profile = await getUserProfile(uid)
+  const profile = await getUserProfile(username)
   if (!profile) notFound()
 
-  const isOwnProfile = user.id === uid
+  const isOwnProfile = user.id === username
 
   return <ProfileView profile={profile} isOwnProfile={isOwnProfile} />
 }

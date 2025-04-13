@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useState, useRef, useEffect } from "react"
 import Image from "next/image"
 import { CalendarIcon, BookOpen, Film, Tv, ListChecks, ChevronLeft, ChevronRight, ChevronDown, Search, Loader2 } from "lucide-react"
@@ -643,10 +644,12 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                   <CardTitle>Taste Report</CardTitle>
                   <CardDescription>AI-generated analysis of your media preferences</CardDescription>
                 </div>
-                <Button variant="default" className="bg-pink-500 hover:bg-pink-600 text-white">
-                  See full AI report
-                  <ChevronRight className="ml-1 h-4 w-4" />
-                </Button>
+                <Link href={`/profile/${profile.id}/ai-report`}>
+                  <Button variant="default" className="bg-pink-500 hover:bg-pink-600 text-white">
+                    See full AI report
+                    <ChevronRight className="ml-1 h-4 w-4" />
+                  </Button>
+                </Link>
               </div>
             </CardHeader>
             <CardContent>
