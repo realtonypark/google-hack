@@ -8,20 +8,22 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
 import { addToLibrary } from "@/lib/api"
-import { MediaItem } from "@/types/database"
-import { Rating } from "@/components/ui/rating"
+import { MediaItem, MediaEntry } from "@/types/database"
 import { Separator } from "@/components/ui/separator"
 import { RatingDistribution } from "@/components/rating-distribution"
+import { useAuth } from "@/lib/authContext"
+import { format } from "date-fns"
 
 export default function MediaDetailPage() {
   const { id } = useParams()
   const router = useRouter()
   const { toast } = useToast()
+  const { user } = useAuth()
   const [media, setMedia] = useState<MediaItem | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [userRating, setUserRating] = useState(0)
   const [inWatchlist, setInWatchlist] = useState(false)
   const [ratingDistribution, setRatingDistribution] = useState<Record<string, number>>({})
+  const [userLog, setUserLog] = useState<MediaEntry | null>(null)
 
   useEffect(() => {
     const fetchMedia = async () => {
@@ -39,6 +41,15 @@ export default function MediaDetailPage() {
           const distributionData = await distributionResponse.json()
           setRatingDistribution(distributionData.distribution)
         }
+
+        // Fetch user's log if logged in
+        if (user) {
+          const logResponse = await fetch(`/api/media/${id}/user-log`)
+          if (logResponse.ok) {
+            const logData = await logResponse.json()
+            setUserLog(logData)
+          }
+        }
       } catch (error) {
         console.error('Error fetching media:', error)
         toast({
@@ -52,36 +63,7 @@ export default function MediaDetailPage() {
     }
 
     fetchMedia()
-  }, [id, toast])
-
-  const handleRatingChange = async (rating: number) => {
-    try {
-      const response = await fetch(`/api/media/${id}/rate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ rating }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to update rating')
-      }
-
-      setUserRating(rating)
-      toast({
-        title: "Rating updated",
-        description: "Your rating has been saved",
-      })
-    } catch (error) {
-      console.error('Error updating rating:', error)
-      toast({
-        title: "Error",
-        description: "Failed to update rating",
-        variant: "destructive",
-      })
-    }
-  }
+  }, [id, toast, user])
 
   const toggleWatchlist = async () => {
     try {
@@ -169,15 +151,47 @@ export default function MediaDetailPage() {
             </div>
           </div>
 
+          {userLog && (
+            <div className="space-y-4 p-4 border rounded-lg">
+              <h3 className="font-semibold">Your Log</h3>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Date:</span>
+                  <span>{format(new Date(userLog.watchedAt), 'MMMM d, yyyy')}</span>
+                </div>
+                {userLog.rating > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Your Rating:</span>
+                    <span>{userLog.rating.toFixed(1)}</span>
+                  </div>
+                )}
+                {userLog.tag && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Tags:</span>
+                    <span>{userLog.tag}</span>
+                  </div>
+                )}
+                {userLog.review && (
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground">Review:</span>
+                    <p className="text-sm">{userLog.review}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-4">
             <div className="flex gap-4">
-              <Button
-                className="flex-1"
-                onClick={() => router.push(`/add?mediaId=${media.id}`)}
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Log this
-              </Button>
+              {!userLog && (
+                <Button
+                  className="flex-1"
+                  onClick={() => router.push(`/add?mediaId=${media.id}`)}
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Log this
+                </Button>
+              )}
               <Button
                 variant={inWatchlist ? "outline" : "default"}
                 className="flex-1"
@@ -198,84 +212,9 @@ export default function MediaDetailPage() {
             </div>
 
             <div className="space-y-2">
-              <h2 className="text-lg font-semibold">Your Rating</h2>
-              <Rating value={userRating} onChange={handleRatingChange} />
+              <h3 className="font-semibold">Community Rating</h3>
+              <RatingDistribution distribution={ratingDistribution} />
             </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">MediaMatch Rating</h2>
-                <span className="text-2xl font-bold text-yellow-400">
-                  {Object.keys(ratingDistribution).length > 0 ? 
-                    (Object.entries(ratingDistribution).reduce((acc, [rating, count]) => 
-                      acc + (parseFloat(rating) * count), 0) / 
-                      Object.values(ratingDistribution).reduce((a, b) => a + b, 0)
-                    ).toFixed(1) : 
-                    '--'
-                  }
-                </span>
-              </div>
-              {Object.keys(ratingDistribution).length > 0 ? (
-                <div className="pt-2">
-                  <RatingDistribution 
-                    distribution={ratingDistribution}
-                    totalRatings={Object.values(ratingDistribution).reduce((a, b) => a + b, 0)}
-                  />
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No ratings yet • Be the first to rate
-                </p>
-              )}
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Community Rating (TMDB)</h2>
-                <span className="text-2xl font-bold text-yellow-400">
-                  {media.rating.toFixed(1)}
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Based on {media.totalRatings} ratings
-              </p>
-            </div>
-
-            <Separator />
-          </div>
-
-          <div className="space-y-4">
-            {media.description && (
-              <div>
-                <h2 className="text-xl font-semibold mb-2">Description</h2>
-                <p className="text-muted-foreground">{media.description}</p>
-              </div>
-            )}
-
-            {media.authors && media.authors.length > 0 && (
-              <div>
-                <h2 className="text-xl font-semibold mb-2">Authors</h2>
-                <p className="text-muted-foreground">{media.authors.join(", ")}</p>
-              </div>
-            )}
-
-            {media.directors && media.directors.length > 0 && (
-              <div>
-                <h2 className="text-xl font-semibold mb-2">Directors</h2>
-                <p className="text-muted-foreground">{media.directors.join(", ")}</p>
-              </div>
-            )}
-
-            {media.cast && media.cast.length > 0 && (
-              <div>
-                <h2 className="text-xl font-semibold mb-2">Cast</h2>
-                <p className="text-muted-foreground">{media.cast.join(", ")}</p>
-              </div>
-            )}
           </div>
         </div>
       </div>

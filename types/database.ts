@@ -79,6 +79,11 @@ export interface MediaItem {
   genres?: string[];
   externalId?: string;
   stats?: MediaStats;
+  rating?: number;
+  totalRatings?: number;
+  authors?: string[];
+  directors?: string[];
+  cast?: string[];
 }
 
 export interface UserReview {

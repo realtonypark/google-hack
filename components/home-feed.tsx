@@ -4,14 +4,15 @@ import { useState, useCallback } from "react"
 import { useAuth } from "@/lib/authContext"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Search, Loader2 } from "lucide-react"
+import { Search, Loader2, BookOpen, Film, Tv } from "lucide-react"
 import RecommendationSection from "@/components/recommendation-section"
 import MediaSearchResults from "@/components/media-search-results"
-import { MediaItem } from "@/types/database"
+import { MediaItem, MediaType } from "@/types/database"
 import { useToast } from "@/components/ui/use-toast"
 import { useDebouncedCallback } from 'use-debounce'
 import { Timestamp } from 'firebase/firestore'
 import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
 
 export default function HomeFeed() {
   const { user, loading } = useAuth()
@@ -20,6 +21,7 @@ export default function HomeFeed() {
   const [isSearching, setIsSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<MediaItem[]>([])
   const [searchError, setSearchError] = useState<string | null>(null)
+  const [selectedType, setSelectedType] = useState<MediaType>('movie')
   const router = useRouter()
 
   const handleMediaSelect = useCallback((media: MediaItem) => {
@@ -37,19 +39,18 @@ export default function HomeFeed() {
     setSearchError(null);
     
     try {
-      console.log('Performing search for:', query);
-      const response = await fetch(`/api/media/search?q=${encodeURIComponent(query)}`);
-      console.log('Search response status:', response.status);
+      const response = await fetch(`/api/media/search?q=${encodeURIComponent(query)}${selectedType ? `&type=${selectedType}` : ''}`);
       
       if (!response.ok) {
-        throw new Error(`Search failed with status ${response.status}`);
+        setSearchResults([]);
+        return;
       }
       
       const results = await response.json();
-      console.log('Search results:', results);
       
       if (!Array.isArray(results)) {
-        throw new Error('Invalid results format received');
+        setSearchResults([]);
+        return;
       }
       
       setSearchResults(results);
@@ -57,16 +58,8 @@ export default function HomeFeed() {
       if (results.length === 0) {
         setSearchError(`No results found for "${query}"`);
       }
-    } catch (error) {
-      console.error("Search failed:", error);
-      setSearchError(error instanceof Error ? error.message : 'Search failed');
+    } catch {
       setSearchResults([]);
-      
-      toast({
-        title: "Search Error",
-        description: error instanceof Error ? error.message : 'Failed to search media',
-        variant: "destructive",
-      });
     } finally {
       setIsSearching(false);
     }
@@ -86,6 +79,19 @@ export default function HomeFeed() {
     });
   };
 
+  const getSearchPlaceholder = () => {
+    switch (selectedType) {
+      case 'movie':
+        return "Search movies...";
+      case 'tv':
+        return "Search TV shows...";
+      case 'book':
+        return "Search books...";
+      default:
+        return "Search movies...";
+    }
+  };
+
   // Move loading check after all hooks
   if (loading) {
     return <div className="container py-6 flex justify-center">Loading...</div>
@@ -93,20 +99,52 @@ export default function HomeFeed() {
 
   return (
     <div className="container py-6 space-y-8">
-      <div className="relative max-w-md mx-auto">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search for books, movies or TV shows..."
-          className="pl-8"
-          value={searchQuery}
-          onChange={(e) => handleSearchInput(e.target.value)}
-        />
-        {isSearching && (
-          <div className="absolute right-2.5 top-2.5">
-            <Loader2 className="h-4 w-4 animate-spin" />
+      <div className="space-y-4">
+        <div className="flex flex-col items-center gap-2">
+          <p className="text-sm text-muted-foreground">Search by category:</p>
+          <div className="flex gap-2">
+            <Button
+              variant={selectedType === 'movie' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedType('movie')}
+            >
+              <Film className="mr-2 h-4 w-4" />
+              Movies
+            </Button>
+            <Button
+              variant={selectedType === 'tv' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedType('tv')}
+            >
+              <Tv className="mr-2 h-4 w-4" />
+              TV Shows
+            </Button>
+            <Button
+              variant={selectedType === 'book' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedType('book')}
+            >
+              <BookOpen className="mr-2 h-4 w-4" />
+              Books
+            </Button>
           </div>
-        )}
+        </div>
+
+        <div className="relative max-w-md mx-auto">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder={getSearchPlaceholder()}
+            className="pl-8"
+            value={searchQuery}
+            onChange={(e) => handleSearchInput(e.target.value)}
+          />
+          {isSearching && (
+            <div className="absolute right-2.5 top-2.5">
+              <Loader2 className="h-4 w-4 animate-spin" />
+            </div>
+          )}
+        </div>
       </div>
 
       {searchResults.length > 0 && (

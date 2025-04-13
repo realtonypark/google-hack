@@ -621,9 +621,6 @@ video {
 .inset-0 {
   inset: 0px;
 }
-.inset-4 {
-  inset: 1rem;
-}
 .inset-x-0 {
   left: 0px;
   right: 0px;
@@ -1122,6 +1119,9 @@ video {
 .flex-1 {
   flex: 1 1 0%;
 }
+.flex-shrink-0 {
+  flex-shrink: 0;
+}
 .shrink-0 {
   flex-shrink: 0;
 }
@@ -1353,6 +1353,11 @@ video {
 .overflow-x-hidden {
   overflow-x: hidden;
 }
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .whitespace-nowrap {
   white-space: nowrap;
 }
@@ -1454,6 +1459,9 @@ video {
 .bg-background {
   background-color: hsl(var(--background));
 }
+.bg-background\/80 {
+  background-color: hsl(var(--background) / 0.8);
+}
 .bg-background\/95 {
   background-color: hsl(var(--background) / 0.95);
 }
@@ -1509,9 +1517,6 @@ video {
 .bg-white {
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
-}
-.bg-background\/80 {
-  background-color: hsl(var(--background) / 0.8);
 }
 .fill-current {
   fill: currentColor;
@@ -1787,6 +1792,9 @@ video {
 .text-yellow-400 {
   --tw-text-opacity: 1;
   color: rgb(250 204 21 / var(--tw-text-opacity, 1));
+}
+.text-background {
+  color: hsl(var(--background));
 }
 .underline-offset-4 {
   text-underline-offset: 4px;

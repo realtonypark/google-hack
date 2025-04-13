@@ -1,6 +1,6 @@
 // This file contains API functions for interacting with the backend
 
-import { addMediaEntry, updateFavoriteMedia } from '@/lib/firebase/firestore';
+import { addMediaEntry, updateFavoriteMedia, getUserProfile as getUserProfileFromFirestore } from '@/lib/firebase/firestore';
 import { auth } from '@/lib/firebase/firebase';
 import { MediaEntry, MediaType } from '@/types/database';
 
@@ -40,41 +40,38 @@ export async function addMediaToLibrary(mediaData: {
     throw new Error('User must be logged in to add media to library');
   }
 
-  // Extract media type from mediaId (format: type-id)
-  const [type, id] = mediaData.mediaId.split('-');
-  if (!type || !id) {
-    throw new Error('Invalid media ID format');
-  }
-
-  // If title or coverImage is missing, fetch media details
-  if (!mediaData.title || !mediaData.coverImage) {
+  // Try to fetch media details, but don't throw if not found
+  let mediaDetails = null;
+  try {
     const response = await fetch(`/api/media/${mediaData.mediaId}`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch media details');
+    if (response.ok) {
+      mediaDetails = await response.json();
     }
-    const mediaDetails = await response.json();
-    mediaData.title = mediaData.title || mediaDetails.title;
-    mediaData.coverImage = mediaData.coverImage || mediaDetails.coverImage;
+  } catch (error) {
+    console.log('Could not fetch media details:', error);
   }
-
-  const mediaType = type as MediaType;
   
+  // Use fetched details if available, otherwise use provided data
+  const title = mediaData.title || mediaDetails?.title || 'Unknown Title';
+  const coverImage = mediaData.coverImage || mediaDetails?.coverImage || 'https://via.placeholder.com/500x750?text=No+Image+Available';
+  const type = mediaDetails?.type || 'media' as MediaType;
+
   // Create the entry data
   const entry: Omit<MediaEntry, 'createdAt' | 'updatedAt'> = {
     rating: mediaData.rating || 0,
     tag: mediaData.tags,
     review: mediaData.notes,
-    watchedAt: mediaData.date || new Date(), // Use provided date or current date
-    title: mediaData.title || '', // Store title for easy reference
-    coverImage: mediaData.coverImage || '', // Store cover image for easy reference
-    mediaId: id,
-    type: mediaType
+    watchedAt: mediaData.date || new Date(),
+    title: title,
+    coverImage: coverImage,
+    mediaId: mediaData.mediaId,
+    type: type
   };
 
-  console.log('Adding media entry:', entry); // Add logging
+  console.log('Adding media entry:', entry);
 
   // Add the entry to the user's library
-  const entryId = await addMediaEntry(user.uid, mediaType, id, entry);
+  const entryId = await addMediaEntry(user.uid, type, mediaData.mediaId, entry);
 
   return entryId;
 }
@@ -113,14 +110,36 @@ export async function addToLibrary(mediaId: string) {
 }
 
 // Get user profile data
-export async function getUserProfile(username: string) {
-  // In a real app, this would fetch from Firestore
-  return {
-    id: "1",
-    name: "John Doe",
-    username: username,
-    image: "/placeholder.svg?height=128&width=128",
-    following: 42,
-    followers: 128,
+export async function getUserProfile(uid: string): Promise<any> {
+  try {
+    // Get the user document from Firestore using the UID
+    const userDoc = await getUserProfileFromFirestore(uid);
+    
+    if (!userDoc) {
+      return null;
+    }
+
+    // Transform the data to match the expected format
+    return {
+      id: userDoc.uid,
+      name: userDoc.displayName,
+      username: userDoc.displayName?.toLowerCase().replace(/\s+/g, "") || userDoc.uid,
+      image: userDoc.photoURL || "/placeholder.svg?height=128&width=128",
+      following: 0, // TODO: Implement following/followers functionality
+      followers: 0,
+      stats: userDoc.stats || {
+        totalRatings: 0,
+        averageRating: 0,
+        ratingDistribution: {}
+      },
+      favoriteMedia: userDoc.favoriteMedia || {
+        movie: null,
+        tv: null,
+        book: null
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    return null;
   }
 }

@@ -1,4 +1,4 @@
-import { db } from './firebase';
+import { db } from '@/lib/firebase/firebase';
 import { collection, doc, getDoc, setDoc, updateDoc, query, where, getDocs, addDoc, Timestamp, DocumentReference, DocumentData } from 'firebase/firestore';
 import { MediaEntry, MediaType, UserProfile, MediaItem } from '@/types/database';
 
@@ -307,15 +307,19 @@ export async function getUserMediaEntries(
   mediaType?: MediaType
 ): Promise<Array<{ id: string; mediaId: string; type: MediaType } & MediaEntry>> {
   try {
+    console.log('Starting getUserMediaEntries for user:', userId);
     const entries: Array<{ id: string; mediaId: string; type: MediaType } & MediaEntry> = [];
     
     if (mediaType) {
       // Query specific media type
-      const libraryRef = doc(db, 'users', userId, 'library', mediaType);
-      const entriesSnapshot = await getDocs(collection(libraryRef, 'entries'));
+      const entriesRef = collection(db, 'users', userId, 'library', mediaType, 'entries');
+      console.log('Querying specific media type:', mediaType, 'at path:', entriesRef.path);
+      const entriesSnapshot = await getDocs(entriesRef);
+      console.log('Found entries for', mediaType, ':', entriesSnapshot.size);
       
       for (const doc of entriesSnapshot.docs) {
         const entryData = doc.data() as MediaEntry;
+        console.log('Processing entry:', entryData);
         entries.push({
           id: doc.id,
           ...entryData,
@@ -326,13 +330,17 @@ export async function getUserMediaEntries(
     } else {
       // Query all media types
       const mediaTypes: MediaType[] = ['movie', 'tv', 'book'];
+      console.log('Querying all media types:', mediaTypes);
       
       for (const type of mediaTypes) {
-        const libraryRef = doc(db, 'users', userId, 'library', type);
-        const entriesSnapshot = await getDocs(collection(libraryRef, 'entries'));
+        const entriesRef = collection(db, 'users', userId, 'library', type, 'entries');
+        console.log('Querying media type:', type, 'at path:', entriesRef.path);
+        const entriesSnapshot = await getDocs(entriesRef);
+        console.log('Found entries for', type, ':', entriesSnapshot.size);
         
         for (const doc of entriesSnapshot.docs) {
           const entryData = doc.data() as MediaEntry;
+          console.log('Processing entry:', entryData);
           entries.push({
             id: doc.id,
             ...entryData,
@@ -343,6 +351,7 @@ export async function getUserMediaEntries(
       }
     }
 
+    console.log('Total entries found:', entries.length);
     // Sort entries by watchedAt date in descending order
     entries.sort((a, b) => {
       const dateA = a.watchedAt instanceof Date ? a.watchedAt : a.watchedAt.toDate();

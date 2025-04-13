@@ -21,6 +21,7 @@ import { RatingDistribution } from "@/components/rating-distribution"
 import { getUserMediaEntries } from "@/lib/firebase/firestore"
 import { format } from "date-fns"
 import { Timestamp } from 'firebase/firestore'
+import { updateFavoriteMedia } from "@/lib/firebase/firestore"
 
 interface ProfileViewProps {
   profile: any
@@ -48,6 +49,8 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [libraryEntries, setLibraryEntries] = useState<(MediaEntry & { id: string })[]>([]);
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(true);
+  const [selectedMediaType, setSelectedMediaType] = useState<MediaType | 'all'>('all');
+  const [hoveredDate, setHoveredDate] = useState<Date | null>(null);
 
   // Mock taste data
   const tasteData = {
@@ -84,7 +87,39 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
     isOpen: false
   })
 
-  const [favoriteMedia, setFavoriteMedia] = useState<FavoriteMediaCollection>(tasteData.favoriteMedia)
+  const [favoriteMedia, setFavoriteMedia] = useState<FavoriteMediaCollection>({
+    book: profile.favoriteMedia?.book || {
+      title: "The Lord of the Rings",
+      coverImage: "/placeholder.svg?height=400&width=250",
+    },
+    movie: profile.favoriteMedia?.movie || {
+      title: "The Shawshank Redemption",
+      coverImage: "/placeholder.svg?height=400&width=250",
+    },
+    series: profile.favoriteMedia?.tv || {
+      title: "Breaking Bad",
+      coverImage: "/placeholder.svg?height=400&width=250",
+    },
+  });
+
+  // Add useEffect to update favoriteMedia when profile changes
+  useEffect(() => {
+    console.log('Updating favorite media from profile:', profile.favoriteMedia);
+    setFavoriteMedia({
+      book: profile.favoriteMedia?.book || {
+        title: "The Lord of the Rings",
+        coverImage: "/placeholder.svg?height=400&width=250",
+      },
+      movie: profile.favoriteMedia?.movie || {
+        title: "The Shawshank Redemption",
+        coverImage: "/placeholder.svg?height=400&width=250",
+      },
+      series: profile.favoriteMedia?.tv || {
+        title: "Breaking Bad",
+        coverImage: "/placeholder.svg?height=400&width=250",
+      },
+    });
+  }, [profile.favoriteMedia]);
 
   const formatYearMonth = (date: Date) => {
     return `${date.getFullYear()}.${(date.getMonth() + 1).toString().padStart(2, '0')}`
@@ -158,21 +193,12 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
 
   // Mock rating distribution data
   const ratingData = {
-    averageRating: 3.7,
-    numberOfRatings: 295,
-    mostFrequent: 4.0,
-    distribution: {
-      "0.5": 5,
-      "1.0": 10,
-      "1.5": 12,
-      "2.0": 15,
-      "2.5": 20,
-      "3.0": 35,
-      "3.5": 45,
-      "4.0": 80,
-      "4.5": 50,
-      "5.0": 23
-    }
+    averageRating: profile.stats?.averageRating || 0,
+    numberOfRatings: profile.stats?.totalRatings || 0,
+    mostFrequent: profile.stats?.ratingDistribution ? 
+      Object.entries(profile.stats.ratingDistribution as Record<string, number>)
+        .sort((a, b) => b[1] - a[1])[0]?.[0] || 0 : 0,
+    distribution: profile.stats?.ratingDistribution as Record<string, number> || {}
   }
 
   const handleEditMedia = (type: keyof FavoriteMediaCollection) => {
@@ -196,17 +222,20 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
   }
 
   const handleSearch = async (query: string) => {
+    console.log('Starting search with query:', query, 'and type:', editingMedia.type);
     setSearchQuery(query)
     if (query.length > 2) {
       setIsSearching(true)
       try {
         // Convert media type to API expected format
         const mediaType = editingMedia.type === 'series' ? 'tv' : editingMedia.type;
+        console.log('Searching for media type:', mediaType);
         const response = await fetch(`/api/media/search?q=${encodeURIComponent(query)}&type=${mediaType}`);
         if (!response.ok) {
           throw new Error('Search failed');
         }
         const results = await response.json();
+        console.log('Search results:', results);
         setSearchResults(results);
       } catch (error) {
         console.error('Search failed:', error);
@@ -223,21 +252,73 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
     }
   }
 
-  const handleSelectMedia = (media: MediaItem) => {
+  const handleSelectMedia = async (media: MediaItem) => {
+    console.log('Selected media:', media);
     if (editingMedia.type) {
       const mediaType = editingMedia.type as keyof FavoriteMediaCollection;
-      setFavoriteMedia(prev => ({
-        ...prev,
-        [mediaType]: {
+      console.log('Updating favorite media for type:', mediaType);
+      try {
+        // Convert 'series' to 'tv' for Firestore
+        const firestoreMediaType = mediaType === 'series' ? 'tv' : mediaType;
+        
+        // Update the database
+        console.log('Updating database with:', {
+          userId: profile.id,
+          mediaType: firestoreMediaType as MediaType,
+          mediaData: {
+            mediaId: media.id,
+            title: media.title,
+            coverImage: media.coverImage || "/placeholder.svg",
+          }
+        });
+        await updateFavoriteMedia(profile.id, firestoreMediaType as MediaType, {
+          mediaId: media.id,
           title: media.title,
           coverImage: media.coverImage || "/placeholder.svg",
+        });
+
+        // Update local state
+        console.log('Updating local state with:', {
+          [mediaType]: {
+            title: media.title,
+            coverImage: media.coverImage || "/placeholder.svg",
+          }
+        });
+        setFavoriteMedia(prev => ({
+          ...prev,
+          [mediaType]: {
+            title: media.title,
+            coverImage: media.coverImage || "/placeholder.svg",
+          }
+        }));
+
+        // Close dialog and reset search
+        setEditingMedia({ type: null, isOpen: false });
+        setSearchQuery("");
+        setSearchResults([]);
+
+        // Show success toast
+        toast({
+          title: "Success",
+          description: `Updated favorite ${mediaType}`,
+        });
+      } catch (error) {
+        console.error('Error updating favorite media:', error);
+        if (error instanceof Error) {
+          console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+          });
         }
-      }));
-      setEditingMedia({ type: null, isOpen: false });
-      setSearchQuery("");
-      setSearchResults([]);
+        toast({
+          title: "Error",
+          description: "Failed to update favorite media",
+          variant: "destructive",
+        });
+      }
     }
-  }
+  };
 
   const handleProfileImageClick = () => {
     if (isOwnProfile && fileInputRef.current) {
@@ -284,27 +365,37 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
 
   useEffect(() => {
     const fetchLibrary = async () => {
-      if (!profile?.uid) {
-        console.log('No profile UID available');
+      if (!profile?.id) {
+        console.log('No profile ID available');
         return;
       }
       
       try {
         setIsLoadingLibrary(true);
-        console.log('Fetching library entries for user:', profile.uid);
-        const entries = await getUserMediaEntries(profile.uid);
+        console.log('Starting fetchLibrary for user:', profile.id);
+        const entries = await getUserMediaEntries(profile.id);
         console.log('Fetched library entries:', entries);
         
         // Filter out entries without required data
-        const validEntries = entries.filter(entry => 
-          entry.title && 
-          entry.watchedAt && 
-          entry.type
-        );
+        const validEntries = entries.filter(entry => {
+          const isValid = entry.title && entry.watchedAt && entry.type;
+          if (!isValid) {
+            console.log('Invalid entry:', entry);
+          }
+          return isValid;
+        });
         
+        console.log('Valid entries:', validEntries);
         setLibraryEntries(validEntries);
       } catch (error) {
-        console.error('Error fetching library:', error);
+        console.error('Error in fetchLibrary:', error);
+        if (error instanceof Error) {
+          console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+          });
+        }
         toast({
           title: "Error",
           description: "Failed to load media library",
@@ -315,18 +406,32 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
       }
     };
 
+    console.log('Profile ID:', profile?.id);
     fetchLibrary();
-  }, [profile?.uid]);
+  }, [profile?.id]);
 
   // Add function to get media entries for a specific date
   const getMediaEntriesForDate = (date: Date) => {
+    if (!libraryEntries.length) {
+      console.log('No library entries available');
+      return [];
+    }
+    
     const entries = libraryEntries.filter(entry => {
+      if (!entry.watchedAt) {
+        console.log('Entry missing watchedAt:', entry);
+        return false;
+      }
+      
       const entryDate = entry.watchedAt instanceof Date ? entry.watchedAt : entry.watchedAt.toDate();
       const isMatch = entryDate.toDateString() === date.toDateString();
+      const matchesType = selectedMediaType === 'all' || entry.type === selectedMediaType;
+      
       if (isMatch) {
         console.log('Found matching entry for date:', date.toDateString(), entry);
       }
-      return isMatch;
+      
+      return isMatch && matchesType;
     });
     
     // Sort entries by rating in descending order
@@ -336,10 +441,17 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
   // Update the calendar cell rendering
   const renderCalendarCell = (date: Date) => {
     const entries = getMediaEntriesForDate(date);
+    const hasEntries = entries.length > 0;
+    
     return (
-      <div key={date.toISOString()} className="aspect-square p-1">
+      <div 
+        key={date.toISOString()} 
+        className="aspect-square p-1 relative group"
+        onMouseEnter={() => setHoveredDate(date)}
+        onMouseLeave={() => setHoveredDate(null)}
+      >
         <div className="relative w-full h-full">
-          {entries.length > 0 && (
+          {hasEntries && (
             <div className="absolute inset-0 grid grid-cols-2 gap-0.5">
               {entries.slice(0, 2).map((entry, index) => (
                 <div key={`${entry.id}-${index}`} className="relative aspect-[2/3] rounded overflow-hidden">
@@ -362,8 +474,38 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               )}
             </div>
           )}
-          <div className="absolute top-1 left-1 text-xs">{date.getDate()}</div>
+          <div className={`absolute top-1 left-1 text-xs ${hasEntries ? 'text-background' : ''}`}>
+            {date.getDate()}
+          </div>
         </div>
+
+        {/* Tooltip for showing all entries */}
+        {hoveredDate?.toDateString() === date.toDateString() && entries.length > 0 && (
+          <div className="absolute z-50 w-64 p-2 bg-background border rounded-lg shadow-lg">
+            <div className="text-sm font-medium mb-1">
+              {format(date, 'MMMM d, yyyy')}
+            </div>
+            <div className="space-y-2">
+              {entries.map((entry) => (
+                <div key={entry.id} className="flex items-center gap-2">
+                  <div className="w-8 h-12 relative flex-shrink-0">
+                    <img
+                      src={entry.coverImage || "/placeholder.svg"}
+                      alt={entry.title}
+                      className="object-cover w-full h-full rounded"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{entry.title}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {entry.type} • {entry.rating ? `★ ${entry.rating}` : 'No rating'}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -611,15 +753,18 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <CardTitle>Calendar</CardTitle>
               <div className="flex items-center gap-2">
-                <Select defaultValue="all">
-                  <SelectTrigger className="w-[70px] h-8">
-                    <SelectValue>All</SelectValue>
+                <Select 
+                  value={selectedMediaType} 
+                  onValueChange={(value) => setSelectedMediaType(value as MediaType | 'all')}
+                >
+                  <SelectTrigger className="w-[100px] h-8">
+                    <SelectValue placeholder="Filter" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="movies">Movies</SelectItem>
-                    <SelectItem value="books">Books</SelectItem>
-                    <SelectItem value="series">Series</SelectItem>
+                    <SelectItem value="movie">Movies</SelectItem>
+                    <SelectItem value="tv">TV Shows</SelectItem>
+                    <SelectItem value="book">Books</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

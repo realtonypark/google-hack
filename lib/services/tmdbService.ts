@@ -63,7 +63,7 @@ const genreMap: Record<number, string> = {
   10768: 'War & Politics',
 };
 
-export async function searchMovies(query: string): Promise<MediaItem[]> {
+export const searchMovies = async (query: string): Promise<MediaItem[]> => {
   const response = await fetch(
     `${TMDB_API}/search/movie?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&query=${encodeURIComponent(query)}`
   );
@@ -87,9 +87,9 @@ export async function searchMovies(query: string): Promise<MediaItem[]> {
       }
     };
   });
-}
+};
 
-export async function searchTVShows(query: string): Promise<MediaItem[]> {
+export const searchTVShows = async (query: string): Promise<MediaItem[]> => {
   const response = await fetch(
     `${TMDB_API}/search/tv?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&query=${encodeURIComponent(query)}`
   );
@@ -113,4 +113,4 @@ export async function searchTVShows(query: string): Promise<MediaItem[]> {
       }
     };
   });
-} 
+}; 
