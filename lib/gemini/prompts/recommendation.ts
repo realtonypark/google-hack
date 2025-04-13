@@ -44,8 +44,8 @@ export function generateRecommendationPrompt(profile: string, type: "personal" |
   Recommend 10 media items (movies, TV shows, or books) that help the user expand their tastes, while still maintaining some degree of relevance to their existing preferences.
   
   Guidelines:
-  - Maintain 30% alignment with the user's known preferences.
-  - Introduce 70% novelty through new genres, countries, or historical periods.
+  - Maintain 15% alignment with the user's known preferences.
+  - Introduce 85% novelty through new genres, countries, or historical periods.
   - Prioritize famous, well known media
   - At least 1 recommendation should be from an underrepresented region or non-mainstream genre.
   - Each item should include the title, release year
