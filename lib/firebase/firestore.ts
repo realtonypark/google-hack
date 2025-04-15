@@ -2,6 +2,9 @@ import { db } from '@/lib/firebase/firebase';
 import { collection, doc, getDoc, setDoc, updateDoc, query, where, getDocs, addDoc, Timestamp, DocumentReference, DocumentData } from 'firebase/firestore';
 import { MediaEntry, MediaType, UserProfile, MediaItem } from '@/types/database';
 import { removeUndefinedFields } from "@/lib/utils"
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
+import { storage } from "./firebase";
+
 
 // User Profile Operations
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
@@ -397,3 +400,48 @@ export async function getAllUsers(): Promise<UserProfile[]> {
     return [];
   }
 } 
+
+
+export async function saveUserAvatar(userId: string, imageUrl: string): Promise<void> {
+  try {
+    const avatarDocRef = doc(db, 'users', userId, 'avatar', 'current');
+    await setDoc(avatarDocRef, {
+      imageUrl,
+      updatedAt: new Date(),
+    });
+  } catch (error) {
+    console.error('Error saving user avatar metadata:', error);
+    throw error;
+  }
+}
+
+export async function getUserAvatar(userId: string): Promise<string | null> {
+  try {
+    const avatarDocRef = doc(db, 'users', userId, 'avatar', 'current');
+    const snapshot = await getDoc(avatarDocRef);
+    if (snapshot.exists()) {
+      return snapshot.data().imageUrl || null;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching user avatar:', error);
+    return null;
+  }
+}
+
+export async function getAvatarTemplate(stage: number): Promise<string> {
+  try {
+    const docRef = doc(db, "avatarTemplates", `stage-${stage}`);
+    const snapshot = await getDoc(docRef);
+    const data = snapshot.data();
+
+    if (!snapshot.exists() || !data?.imageUrl) {
+      throw new Error(`Template URL for stage ${stage} not found`);
+    }
+
+    return data.imageUrl; // Firebase Storage에 저장된 public URL
+  } catch (error) {
+    console.error("Error fetching avatar template:", error);
+    throw error;
+  }
+}

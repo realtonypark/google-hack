@@ -85,6 +85,8 @@ export interface MediaItem {
   directors?: string[];
   cast?: string[];
   year?: string;
+  isFeatured?: boolean
+  isNew?: boolean 
 }
 
 export interface UserReview {

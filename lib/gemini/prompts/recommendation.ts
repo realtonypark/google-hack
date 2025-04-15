@@ -1,22 +1,22 @@
 export function generateRecommendationPrompt(profile: string, type: "personal" | "broaden"): string {
     const sharedInstructions = `
   Output format:
-  1. Title (Year)
-  
+  1. Title (Year) - Type
+
   🔽 At the end of your response, include a parse-friendly summary list of the recommendations:
   Format each line as:  
-  1. Title (Year)  
-  2. Title (Year)  
-  3. Title (Year)  
-  4. Title (Year)  
-  5. Title (Year)
-  6. Title (Year)
-  7. Title (Year)
-  8. Title (Year)
-  9. Title (Year)
-  10. Title (Year)
+  1. Title (Year) - Type 
+  2. Title (Year) - Type 
+  3. Title (Year) - Type 
+  4. Title (Year) - Type  
+  5. Title (Year) - Type
+  6. Title (Year) - Type
+  7. Title (Year) - Type
+  8. Title (Year) - Type
+  9. Title (Year) - Type
+  10. Title (Year) - Type
 
-  If no year is available, just write the title.
+  Type should be either: Movie, TV, or Book
   `;
   
     if (type === "personal") {
@@ -30,7 +30,8 @@ export function generateRecommendationPrompt(profile: string, type: "personal" |
   Guidelines:
   - All recommendations should align strongly with the user's past likes in terms of genre, theme, tone, and style.
   - Focus entirely on reinforcing the user's current preferences.
-  - Each item should include the title, release year
+  - Mix of formats is encouraged (at least 2 TV shows, 2 books).
+  - Each item should include the title, release year, and media type
   
   ${sharedInstructions}
   `;
@@ -56,6 +57,10 @@ Guidelines:
 
 3. **Quality Gate**  
    - Minimum 7.0 IMDB/Goodreads rating    
+
+4. **Format Diversity**  
+   - Include at least 2 TV shows and 2 books
+
   
   ${sharedInstructions}
   `;

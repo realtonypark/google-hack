@@ -1,4 +1,4 @@
-import { db } from '../firebase/firebase';
+import { db } from '../firebase/firebase';
 import { collection, query, getDocs } from 'firebase/firestore';
 import { MediaItem } from '@/types/database';
 

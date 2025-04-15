@@ -26,6 +26,7 @@ import { updateFavoriteMedia } from "@/lib/firebase/firestore"
 import { useRouter } from "next/navigation"
 import { generateTasteSummary } from "@/lib/gemini/taste-summary"
 import ChatbotLauncher from "@/components/ChatbotLauncher"
+import { useDebouncedCallback } from 'use-debounce'
 
 interface ProfileViewProps {
   profile: any
@@ -40,7 +41,7 @@ interface FavoriteMedia {
 interface FavoriteMediaCollection {
   book: { title: string; coverImage: string }
   movie: { title: string; coverImage: string }
-  series: { title: string; coverImage: string }
+  tv: { title: string; coverImage: string }
 }
 
 export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
@@ -59,7 +60,13 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
   const [activeTab, setActiveTab] = useState<'library' | 'watchlist'>('library');
   const [watchlist, setWatchlist] = useState<MediaItem[]>([]);
   const [isLoadingWatchlist, setIsLoadingWatchlist] = useState(true);
-
+  const [favoriteMedia, setFavoriteMedia] = useState<FavoriteMediaCollection>(
+    profile.favoriteMedia || {
+      book: { title: "", coverImage: "" },
+      movie: { title: "", coverImage: "" },
+      series: { title: "", coverImage: "" },
+    }
+  );
   const [editingMedia, setEditingMedia] = useState<{
     type: keyof FavoriteMediaCollection | null
     isOpen: boolean
@@ -88,39 +95,8 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
     fetchTasteData()
   }, [profile.id])
 
-  const [favoriteMedia, setFavoriteMedia] = useState<FavoriteMediaCollection>({
-    book: profile.favoriteMedia?.book || {
-      title: "The Lord of the Rings",
-      coverImage: "/placeholder.svg?height=400&width=250",
-    },
-    movie: profile.favoriteMedia?.movie || {
-      title: "The Shawshank Redemption",
-      coverImage: "/placeholder.svg?height=400&width=250",
-    },
-    series: profile.favoriteMedia?.tv || {
-      title: "Breaking Bad",
-      coverImage: "/placeholder.svg?height=400&width=250",
-    },
-  });
 
-  // Add useEffect to update favoriteMedia when profile changes
-  useEffect(() => {
-    console.log('Updating favorite media from profile:', profile.favoriteMedia);
-    setFavoriteMedia({
-      book: profile.favoriteMedia?.book || {
-        title: "The Lord of the Rings",
-        coverImage: "/placeholder.svg?height=400&width=250",
-      },
-      movie: profile.favoriteMedia?.movie || {
-        title: "The Shawshank Redemption",
-        coverImage: "/placeholder.svg?height=400&width=250",
-      },
-      series: profile.favoriteMedia?.tv || {
-        title: "Breaking Bad",
-        coverImage: "/placeholder.svg?height=400&width=250",
-      },
-    });
-  }, [profile.favoriteMedia]);
+
 
   const formatYearMonth = (date: Date) => {
     return `${date.getFullYear()}.${(date.getMonth() + 1).toString().padStart(2, '0')}`
@@ -208,19 +184,6 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
     }
   }
 
-  const handleSaveMedia = (newTitle: string, newCoverImage: string) => {
-    if (editingMedia.type) {
-      const mediaType = editingMedia.type
-      setFavoriteMedia(prev => ({
-        ...prev,
-        [mediaType]: {
-          title: newTitle,
-          coverImage: newCoverImage,
-        }
-      }))
-      setEditingMedia({ type: null, isOpen: false })
-    }
-  }
 
   const handleSearch = async (query: string) => {
     console.log('Starting search with query:', query, 'and type:', editingMedia.type);
@@ -229,7 +192,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
       setIsSearching(true)
       try {
         // Convert media type to API expected format
-        const mediaType = editingMedia.type === 'series' ? 'tv' : editingMedia.type;
+        const mediaType = editingMedia.type;
         console.log('Searching for media type:', mediaType);
         const response = await fetch(`/api/media/search?q=${encodeURIComponent(query)}&type=${mediaType}`);
         if (!response.ok) {
@@ -260,7 +223,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
       console.log('Updating favorite media for type:', mediaType);
       try {
         // Convert 'series' to 'tv' for Firestore
-        const firestoreMediaType = mediaType === 'series' ? 'tv' : mediaType;
+        const firestoreMediaType = mediaType;
         
         // Update the database
         console.log('Updating database with:', {
@@ -285,13 +248,6 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
             coverImage: media.coverImage || "/placeholder.svg",
           }
         });
-        setFavoriteMedia(prev => ({
-          ...prev,
-          [mediaType]: {
-            title: media.title,
-            coverImage: media.coverImage || "/placeholder.svg",
-          }
-        }));
 
         // Close dialog and reset search
         setEditingMedia({ type: null, isOpen: false });
@@ -318,6 +274,13 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
           variant: "destructive",
         });
       }
+      setFavoriteMedia((prev) => ({
+        ...prev,
+        [mediaType]: {
+          title: media.title,
+          coverImage: media.coverImage || "/placeholder.svg",
+        },
+      }));
     }
   };
 
@@ -461,6 +424,54 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
     return entries.sort((a, b) => (b.rating || 0) - (a.rating || 0));
   };
 
+  const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
+
+  const handleGenerateAvatar = async () => {
+    try {
+      setIsGeneratingAvatar(true);
+      const res = await fetch("/api/avatar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: profile.id,
+          evolutionStage: Math.min(4, Math.floor(libraryEntries.length / 10)), // 0~4단계
+        }),
+      });
+  
+      if (!res.ok) throw new Error("Generation failed");
+  
+      const data = await res.json();
+      if (data.imageUrl) {
+        setProfileImage(data.imageUrl);
+        toast({ title: "Avatar updated!" });
+      } else {
+        throw new Error("No image returned");
+      }
+    } catch (err) {
+      console.error("Avatar generation error:", err);
+      toast({ title: "Error", description: "Failed to generate avatar", variant: "destructive" });
+    } finally {
+      setIsGeneratingAvatar(false);
+    }
+  };
+
+  useEffect(() => {
+    const fetchAvatar = async () => {
+      try {
+        const res = await fetch(`/api/avatar/${profile.id}`);
+        const data = await res.json();
+        if (data.image) {
+          setProfileImage(data.image); // 이제 image는 Storage URL이니까 그대로 사용
+        }
+      } catch (err) {
+        console.error("Error loading avatar:", err);
+      }
+    };
+  
+    fetchAvatar();
+  }, [profile.id]);
+
+
   // Update the calendar cell rendering
   const renderCalendarCell = (date: Date) => {
     const entries = getMediaEntriesForDate(date);
@@ -537,6 +548,10 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
     );
   };
 
+  const debouncedSearch = useDebouncedCallback((query: string) => {
+    handleSearch(query)
+  }, 300)
+
   return (
     <div className="container py-10 max-w-6xl mx-auto">
       {/* Enhanced header with gradient background */}
@@ -556,6 +571,15 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                     {profile.name?.charAt(0) || "U"}
                   </AvatarFallback>
                 </Avatar>
+                {isOwnProfile && (
+                  <Button
+                    onClick={handleGenerateAvatar}
+                    disabled={isGeneratingAvatar}
+                    className="mt-3 w-full"
+                  >
+                    {isGeneratingAvatar ? "Generating..." : "Generate Avatar"}
+                  </Button>
+                )}
                 {isOwnProfile && (
                   <div 
                     className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-1 cursor-pointer shadow-md hover:bg-primary/90 transition-colors"
@@ -598,13 +622,13 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                           className={`relative w-full aspect-[2/3] rounded-xl overflow-hidden mb-2 shadow-md 
                                       ${isOwnProfile ? 'cursor-pointer hover:opacity-90 transition-all duration-300 group' : ''} 
                                       ${!profile.favoriteMedia?.[type] ? 'bg-muted' : ''}`}
-                          onClick={() => isOwnProfile && handleEditMedia(type === 'tv' ? 'series' : type)}
+                          onClick={() => isOwnProfile && handleEditMedia(type)}
                         >
-                          {profile.favoriteMedia?.[type] && (
+                          {favoriteMedia?.[type] && (
                             <>
                               <Image
-                                src={profile.favoriteMedia[type].coverImage}
-                                alt={profile.favoriteMedia[type].title}
+                                src={favoriteMedia[type].coverImage}
+                                alt={favoriteMedia[type].title}
                                 fill
                                 className="object-cover transition-transform duration-500 group-hover:scale-105"
                               />
@@ -1057,7 +1081,10 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 placeholder={`Search for a ${editingMedia.type}...`}
                 className="pl-10 py-6 rounded-lg border border-border/50"
                 value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value)
+                  debouncedSearch(e.target.value)
+                }}
               />
               {isSearching && (
                 <div className="absolute right-3 top-3">
@@ -1081,11 +1108,12 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                                   hover:bg-accent hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
                         onClick={() => handleSelectMedia(result)}
                       >
-                        <div className="w-12 h-18 relative rounded-lg overflow-hidden shadow-sm">
+                        <div className="relative w-[48px] h-[72px] rounded-lg overflow-hidden shadow-sm">
                           <Image
                             src={result.coverImage || "/placeholder.svg"}
                             alt={result.title}
                             fill
+                            sizes="48px"
                             className="object-cover"
                           />
                         </div>

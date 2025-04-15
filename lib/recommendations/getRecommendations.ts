@@ -5,7 +5,7 @@ import { generateUserProfilePrompt } from "@/lib/gemini/prompts/profile"
 import { generateRecommendationPrompt } from "@/lib/gemini/prompts/recommendation"
 import { callGemini } from "@/lib/gemini/client"
 import { parseRecommendationResponse } from "@/lib/gemini/parsers"
-import { matchRecommendationsFromFirestore } from "@/lib/gemini/matcher"
+import { matchRecommendationsViaAPI } from "@/lib/gemini/matcher-api"
 
 import { MediaItem } from "@/types/database"
 
@@ -37,8 +37,8 @@ export async function getRecommendations(type: RecommendationType, userId: strin
   const parsed = parseRecommendationResponse(geminiResponse)
 
   // Step 6: Match parsed recommendations to Firestore media
-  const matchedMedia = await matchRecommendationsFromFirestore(parsed)
-  const isValidMediaItem = (item: MediaItem) => {
+  const matchedMedia = await matchRecommendationsViaAPI(parsed)
+    const isValidMediaItem = (item: MediaItem) => {
     return (
       item.coverImage &&
       !item.coverImage.includes("placeholder") &&
